@@ -130,7 +130,7 @@ export const removeOrganizationMember = async (
 ) => {
   const membership = await prisma.organizationMember.findFirst({
     where: {
-      id: memberId,
+      userId: memberId,
       organizationId,
     },
   });
