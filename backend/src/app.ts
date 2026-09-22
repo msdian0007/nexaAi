@@ -4,6 +4,7 @@ import prisma from './config/database';
 import authRoutes from './auth/auth.routes';
 import protectedRoutes from './auth/auth.protected.route';
 import organizationRoutes from "./organization/organization.routes";
+import documentRoutes from "./document/document.routes";
 
 // const prisma = new PrismaClient();
 const app = express();
@@ -15,6 +16,7 @@ app.use(cors());
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/auth", protectedRoutes)
 app.use("/api/v1/organizations", organizationRoutes);
+app.use("/api/v1/documents", documentRoutes);
 
 app.get("/api/v1/health", async (_req, res) => {
   try {
