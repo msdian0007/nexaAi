@@ -28,6 +28,7 @@ model User {
   updatedAt DateTime @updatedAt
 
   memberships OrganizationMember[]
+  uploadedDocuments Document[]
 }
 
 model Organization {
@@ -38,6 +39,7 @@ model Organization {
   updatedAt DateTime @updatedAt
 
   memberships OrganizationMember[]
+  documents Document[]
 }
 
 model OrganizationMember {
@@ -53,4 +55,38 @@ model OrganizationMember {
   @@unique([userId, organizationId])
   @@index([organizationId])
   @@index([userId])
+}
+
+enum DocumentStatus {
+  UPLOADED
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model Document {
+  id             String         @id @default(uuid())
+  organizationId String
+  uploadedById   String
+
+  name           String
+  originalName   String
+  mimeType       String
+  size           Int
+  storagePath    String
+
+  extractedText String?
+
+  status         DocumentStatus @default(UPLOADED)
+  errorMessage   String?
+
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  uploadedBy   User         @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([uploadedById])
+  @@index([organizationId, status])
 }
