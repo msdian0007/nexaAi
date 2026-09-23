@@ -1,6 +1,6 @@
 import fs from "fs/promises";
 import path from "path";
-import pdfParse from "pdf-parse";
+import { PDFParse } from "pdf-parse";
 import mammoth from "mammoth";
 
 export const extractTextFromDocument = async (
@@ -9,18 +9,29 @@ export const extractTextFromDocument = async (
 ): Promise<string> => {
   const absolutePath = path.resolve(filePath);
 
+  // TXT
   if (mimeType === "text/plain") {
     return fs.readFile(absolutePath, "utf-8");
   }
 
+  // PDF
   if (mimeType === "application/pdf") {
     const buffer = await fs.readFile(absolutePath);
 
-    const result = await pdfParse(buffer);
+    const parser = new PDFParse({
+      data: buffer,
+    });
 
-    return result.text;
+    try {
+      const result = await parser.getText();
+
+      return result.text;
+    } finally {
+      await parser.destroy();
+    }
   }
 
+  // DOCX
   if (
     mimeType ===
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
