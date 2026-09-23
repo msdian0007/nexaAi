@@ -1,4 +1,4 @@
-import { prisma } from "../lib/prisma";
+import prisma from "../config/database";
 import { extractTextFromDocument } from "./document.extractor";
 
 export const processDocument = async (documentId: string) => {
