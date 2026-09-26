@@ -1,4 +1,6 @@
 import prisma from "../config/database";
+import { createDocumentChunks } from "./document.chunk.service";
+import { embedDocumentChunks } from "./document.embedding.service";
 import { extractTextFromDocument } from "./document.extractor";
 
 export const processDocument = async (documentId: string) => {
@@ -25,8 +27,12 @@ export const processDocument = async (documentId: string) => {
 
     const extractedText = await extractTextFromDocument(
       document.storagePath,
-      document.mimeType
+      document.mimeType,
     );
+
+    const chunks = await createDocumentChunks(document.id, extractedText);
+
+    await embedDocumentChunks(document.id);
 
     await prisma.document.update({
       where: {
@@ -45,9 +51,7 @@ export const processDocument = async (documentId: string) => {
     };
   } catch (error) {
     const message =
-      error instanceof Error
-        ? error.message
-        : "Document processing failed";
+      error instanceof Error ? error.message : "Document processing failed";
 
     await prisma.document.update({
       where: {

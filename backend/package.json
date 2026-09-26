@@ -26,6 +26,7 @@
     "typescript": "^5.7.3"
   },
   "dependencies": {
+    "@huggingface/transformers": "^4.3.0",
     "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.10.0",
     "bcrypt": "^6.0.0",
@@ -35,6 +36,7 @@
     "jsonwebtoken": "^9.0.3",
     "mammoth": "^1.12.3",
     "multer": "^2.4.0",
+    "openai": "^7.23.0",
     "pdf-parse": "^2.4.5",
     "pg": "^8.23.0"
   }

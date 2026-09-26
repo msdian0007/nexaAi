@@ -1,0 +1,345 @@
+Great. Phase 3 — Step 4 is complete. ✅
+
+Phase 3 — Step 5: Document Chunking
+
+Now we'll split the extracted document text into smaller pieces.
+
+This is required because sending an entire large document to an LLM is inefficient. Later, the chunks will be embedded and stored in the vector database for RAG.
+
+Current pipeline
+Upload
+  ↓
+File Storage
+  ↓
+Text Extraction ✅
+  ↓
+Chunking ← WE ARE HERE
+  ↓
+Embeddings
+  ↓
+Vector Database
+  ↓
+RAG
+  ↓
+LLM
+Step 5.1 — Decide our chunking strategy
+
+For NexaAI, we'll initially use:
+
+Chunk size:    1000 characters
+Overlap:       200 characters
+
+Example:
+
+Document
+────────────────────────────────────
+
+Chunk 1
+[ 1000 characters ]
+
+       ← 200 character overlap →
+
+Chunk 2
+        [ 1000 characters ]
+
+       ← 200 character overlap →
+
+Chunk 3
+                [ 1000 characters ]
+
+The overlap helps preserve context between chunks.
+
+Step 5.2 — Add DocumentChunk model
+
+Update your Prisma schema.
+
+Add:
+
+model DocumentChunk {
+  id         String   @id @default(uuid())
+  documentId String
+
+  content    String
+  chunkIndex Int
+
+  createdAt  DateTime @default(now())
+
+  document Document @relation(
+    fields: [documentId],
+    references: [id],
+    onDelete: Cascade
+  )
+
+  @@index([documentId])
+  @@unique([documentId, chunkIndex])
+}
+
+Then update your Document model:
+
+model Document {
+  id             String         @id @default(uuid())
+  organizationId String
+  uploadedById   String
+
+  name           String
+  originalName   String
+  mimeType       String
+  size           Int
+  storagePath    String
+
+  extractedText  String?
+
+  status         DocumentStatus @default(UPLOADED)
+  errorMessage   String?
+
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  uploadedBy   User         @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
+
+  chunks DocumentChunk[]
+
+  @@index([organizationId])
+  @@index([uploadedById])
+  @@index([organizationId, status])
+}
+
+The relationship is:
+
+Document
+   │
+   ├── Chunk 1
+   ├── Chunk 2
+   ├── Chunk 3
+   └── Chunk N
+Step 5.3 — Run Prisma migration
+
+Run:
+
+npx prisma migrate dev --name add_document_chunks
+
+Then:
+
+npx prisma generate
+Step 5.4 — Create chunking utility
+
+Create:
+
+src/document/document.chunker.ts
+
+Add:
+
+const CHUNK_SIZE = 1000;
+const CHUNK_OVERLAP = 200;
+
+export interface DocumentChunkData {
+  content: string;
+  chunkIndex: number;
+}
+
+export const chunkText = (
+  text: string
+): DocumentChunkData[] => {
+  const cleanedText = text
+    .replace(/\r\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+  if (!cleanedText) {
+    return [];
+  }
+
+  const chunks: DocumentChunkData[] = [];
+
+  let start = 0;
+  let chunkIndex = 0;
+
+  while (start < cleanedText.length) {
+    let end = start + CHUNK_SIZE;
+
+    if (end < cleanedText.length) {
+      const lastSpace = cleanedText.lastIndexOf(" ", end);
+
+      if (lastSpace > start) {
+        end = lastSpace;
+      }
+    }
+
+    const content = cleanedText
+      .slice(start, end)
+      .trim();
+
+    if (content) {
+      chunks.push({
+        content,
+        chunkIndex,
+      });
+
+      chunkIndex++;
+    }
+
+    if (end >= cleanedText.length) {
+      break;
+    }
+
+    start = end - CHUNK_OVERLAP;
+  }
+
+  return chunks;
+};
+Step 5.5 — Create chunk persistence service
+
+Create:
+
+src/document/document.chunk.service.ts
+
+Add:
+
+import { prisma } from "../lib/prisma";
+import { chunkText } from "./document.chunker";
+
+export const createDocumentChunks = async (
+  documentId: string,
+  extractedText: string
+) => {
+  const chunks = chunkText(extractedText);
+
+  if (chunks.length === 0) {
+    return [];
+  }
+
+  await prisma.documentChunk.deleteMany({
+    where: {
+      documentId,
+    },
+  });
+
+  await prisma.documentChunk.createMany({
+    data: chunks.map((chunk) => ({
+      documentId,
+      content: chunk.content,
+      chunkIndex: chunk.chunkIndex,
+    })),
+  });
+
+  return chunks;
+};
+Why deleteMany()?
+
+Later, if a document is reprocessed, we don't want:
+
+Chunk 1
+Chunk 2
+Chunk 3
+
+Chunk 1
+Chunk 2
+Chunk 3
+
+Instead, existing chunks are removed and recreated.
+
+Step 5.6 — Add chunking to document processing
+
+Open:
+
+src/document/document.processing.ts
+
+Import:
+
+import { createDocumentChunks } from "./document.chunk.service";
+
+After extracting the text:
+
+const extractedText = await extractTextFromDocument(
+  document.storagePath,
+  document.mimeType
+);
+
+Add:
+
+const chunks = await createDocumentChunks(
+  document.id,
+  extractedText
+);
+
+Then update the document:
+
+await prisma.document.update({
+  where: {
+    id: documentId,
+  },
+  data: {
+    extractedText,
+    status: "COMPLETED",
+  },
+});
+
+Your processing flow is now:
+
+const extractedText = await extractTextFromDocument(...)
+                    ↓
+const chunks = await createDocumentChunks(...)
+                    ↓
+save extractedText
+                    ↓
+status = COMPLETED
+Step 5.7 — Test
+
+Upload a document with enough text to produce multiple chunks.
+
+Then open:
+
+npx prisma studio
+
+Check:
+
+Document
+DocumentChunk
+
+You should see something like:
+
+Document
+id: abc123
+status: COMPLETED
+extractedText: ...
+DocumentChunk
+documentId: abc123
+chunkIndex: 0
+content: "...."
+documentId: abc123
+chunkIndex: 1
+content: "...."
+documentId: abc123
+chunkIndex: 2
+content: "...."
+One important point
+
+We're using character-based chunking for this first implementation.
+
+Later, when we build the production-quality RAG pipeline, we can improve this with:
+
+paragraph-aware splitting
+heading-aware splitting
+token-based chunk sizing
+metadata per chunk
+page numbers
+document section information
+
+For now, this implementation gives us a clean foundation for embeddings.
+
+Step 5 completion checklist
+ DocumentChunk model added
+ Migration successful
+ chunkText() works
+ 1000-character chunks
+ 200-character overlap
+ Chunks saved in PostgreSQL
+ Reprocessing doesn't create duplicate chunks
+ Document → DocumentChunk[] relationship works
+
+When all are working, tell me:
+
+Phase 3 Step 5 done
+
+Then we'll move to Step 6 — Embeddings, where the document chunks become vectors that NexaAI can semantically search.

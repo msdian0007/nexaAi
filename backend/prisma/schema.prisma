@@ -75,7 +75,7 @@ model Document {
   size           Int
   storagePath    String
 
-  extractedText String?
+  extractedText  String?
 
   status         DocumentStatus @default(UPLOADED)
   errorMessage   String?
@@ -86,7 +86,26 @@ model Document {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   uploadedBy   User         @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
 
+  chunks DocumentChunk[]
+
   @@index([organizationId])
   @@index([uploadedById])
   @@index([organizationId, status])
+}
+
+model DocumentChunk {
+  id         String   @id @default(uuid())
+  documentId String
+
+  content    String
+  chunkIndex Int
+
+  embeddingStatus String @default("PENDING")
+
+  createdAt  DateTime @default(now())
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+  @@unique([documentId, chunkIndex])
 }
