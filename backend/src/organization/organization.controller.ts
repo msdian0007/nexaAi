@@ -79,9 +79,9 @@ export const addMember = async (req: AuthenticatedRequest, res: Response) => {
 
 export const updateRole = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const organizationId = req.user?.organizationId;
+    const user = req.user;
 
-    if (!organizationId) {
+    if (!user?.organizationId) {
       return res.status(401).json({
         success: false,
         message: "Organization context is missing",
@@ -91,6 +91,13 @@ export const updateRole = async (req: AuthenticatedRequest, res: Response) => {
     const { memberId } = req.params;
     const { role } = req.body;
 
+    if (typeof memberId !== "string" || !memberId) {
+      return res.status(400).json({
+        success: false,
+        message: "Member ID is required",
+      });
+    }
+
     if (!role) {
       return res.status(400).json({
         success: false,
@@ -99,10 +106,10 @@ export const updateRole = async (req: AuthenticatedRequest, res: Response) => {
     }
 
     const member = await updateMemberRole(
-      organizationId,
+      user.organizationId,
       memberId,
       role,
-      req.user.role,
+      user.role,
     );
 
     return res.status(200).json({
@@ -138,6 +145,13 @@ export const removeMember = async (
     }
 
     const { memberId } = req.params;
+
+    if (typeof memberId !== "string" || !memberId) {
+      return res.status(400).json({
+        success: false,
+        message: "Member ID is required",
+      });
+    }
 
     const result = await removeOrganizationMember(organizationId, memberId);
 

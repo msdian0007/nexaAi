@@ -101,6 +101,7 @@ model DocumentChunk {
   chunkIndex Int
 
   embeddingStatus String @default("PENDING")
+  embedding       Unsupported("vector(384)")?
 
   createdAt  DateTime @default(now())
 
