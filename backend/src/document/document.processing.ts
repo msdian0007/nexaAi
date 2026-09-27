@@ -14,17 +14,24 @@ export const processDocument = async (documentId: string) => {
     throw new Error("Document not found");
   }
 
-  try {
-    await prisma.document.update({
-      where: {
-        id: documentId,
-      },
-      data: {
-        status: "PROCESSING",
-        errorMessage: null,
-      },
-    });
+  // Claim the document atomically so concurrent requests cannot both process it.
+  const claim = await prisma.document.updateMany({
+    where: {
+      id: documentId,
+      status: { not: "PROCESSING" },
+    },
+    data: {
+      status: "PROCESSING",
+      errorMessage: null,
+    },
+  });
 
+  // Keep this outside the catch: a rejected request must not mark the active job FAILED.
+  if (claim.count === 0) {
+    throw new Error("Document is already being processed");
+  }
+
+  try {
     const extractedText = await extractTextFromDocument(
       document.storagePath,
       document.mimeType,
