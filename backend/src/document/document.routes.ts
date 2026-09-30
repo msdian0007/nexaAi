@@ -4,11 +4,12 @@ import path from "path";
 import fs from "fs";
 
 import { authenticate } from "../auth/auth.middleware";
-import { documentStatus, uploadDocument } from "./document.controller";
+import { documentStatus, reprocessDocument, uploadDocument } from "./document.controller";
 
 const router = express.Router();
 
 router.get("/:documentId/status", authenticate, documentStatus);
+router.post("/:documentId/reprocess", authenticate, reprocessDocument);
 
 const storage = multer.diskStorage({
   destination: (req: any, _file, cb) => {

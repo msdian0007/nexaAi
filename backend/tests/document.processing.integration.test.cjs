@@ -72,11 +72,11 @@ test("a second request cannot process an active document or change its status", 
       return "Document text";
     };
 
-    const first = processDocument(document.id);
+    const first = processDocument(document.id, document.organizationId);
     try {
       // Also propagate any failure before extraction, instead of waiting forever.
       await Promise.race([entered.promise, first]);
-      await assert.rejects(processDocument(document.id), /already being processed/);
+      await assert.rejects(processDocument(document.id, document.organizationId), /already being processed/);
       const active = await prisma.document.findUniqueOrThrow({ where: { id: document.id } });
       assert.equal(active.status, "PROCESSING");
       assert.equal(active.errorMessage, null);
@@ -98,7 +98,7 @@ test("a second request cannot process an active document or change its status", 
 test("a processing failure records FAILED and permits a later retry", async () => {
   await withDocument(async document => {
     extract = async () => { throw new Error("Test extraction failure"); };
-    await assert.rejects(processDocument(document.id), /Test extraction failure/);
+    await assert.rejects(processDocument(document.id, document.organizationId), /Test extraction failure/);
     const failed = await prisma.document.findUniqueOrThrow({ where: { id: document.id } });
     assert.equal(failed.status, "FAILED");
     assert.equal(failed.errorMessage, "Test extraction failure");
@@ -106,7 +106,7 @@ test("a processing failure records FAILED and permits a later retry", async () =
     assert.equal(embeddingCalls, 0);
 
     extract = async () => "Recovered document text";
-    await processDocument(document.id);
+    await processDocument(document.id, document.organizationId);
     const recovered = await prisma.document.findUniqueOrThrow({ where: { id: document.id } });
     assert.equal(recovered.status, "COMPLETED");
     assert.equal(recovered.errorMessage, null);
@@ -116,5 +116,5 @@ test("a processing failure records FAILED and permits a later retry", async () =
 });
 
 test("a missing document is rejected", async () => {
-  await assert.rejects(processDocument(randomUUID()), /Document not found/);
+  await assert.rejects(processDocument(randomUUID(), randomUUID()), /Document not found/);
 });

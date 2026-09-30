@@ -3,6 +3,54 @@ import { createDocument, getDocumentStatus } from "./document.service";
 import { AuthenticatedRequest } from "../auth/auth.middleware";
 import path from "path";
 import { processDocument } from "./document.processing";
+import { DocumentNotFoundError, DocumentProcessingConflictError } from "./document.errors";
+
+export const reprocessDocument = async (
+  req: AuthenticatedRequest,
+  res: Response,
+) => {
+  try {
+    const organizationId = req.user?.organizationId;
+
+    if (typeof organizationId !== "string" || !organizationId.trim()) {
+      return res.status(401).json({
+        success: false,
+        message: "Organization context is missing",
+      });
+    }
+
+    const { documentId } = req.params;
+
+    if (typeof documentId !== "string" || !documentId.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Document ID is required",
+      });
+    }
+
+    const result = await processDocument(documentId, organizationId, { retryFailedOnly: true });
+
+    return res.status(200).json({
+      success: true,
+      message: "Document reprocessed successfully",
+      data: result,
+    });
+  } catch (error) {
+    if (error instanceof DocumentNotFoundError) {
+      return res.status(404).json({ success: false, message: error.message });
+    }
+
+    if (error instanceof DocumentProcessingConflictError) {
+      return res.status(409).json({ success: false, message: error.message });
+    }
+
+    console.error("Reprocess document error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Document reprocessing failed",
+    });
+  }
+};
 
 export const documentStatus = async (
   req: AuthenticatedRequest,
@@ -78,7 +126,7 @@ export const uploadDocument = async (
       storagePath: path.relative(process.cwd(), req.file.path),
     });
 
-    await processDocument(document.id);
+    await processDocument(document.id, req.user.organizationId);
 
     return res.status(201).json({
       message: "Document uploaded successfully",
