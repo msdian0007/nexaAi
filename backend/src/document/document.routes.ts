@@ -5,8 +5,11 @@ import fs from "fs";
 
 import { authenticate } from "../auth/auth.middleware";
 import { documentStatus, reprocessDocument, uploadDocument } from "./document.controller";
+import { searchDocuments } from "./document.search.controller";
 
 const router = express.Router();
+
+router.post("/search", authenticate, searchDocuments);
 
 router.get("/:documentId/status", authenticate, documentStatus);
 router.post("/:documentId/reprocess", authenticate, reprocessDocument);
