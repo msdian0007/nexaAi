@@ -128,9 +128,15 @@ export const uploadDocument = async (
 
     await processDocument(document.id, req.user.organizationId);
 
+    const completedDocument = await getDocumentStatus(document.id, req.user.organizationId);
+
+    if (!completedDocument) {
+      throw new DocumentNotFoundError();
+    }
+
     return res.status(201).json({
       message: "Document uploaded successfully",
-      document,
+      document: completedDocument,
     });
   } catch (error) {
     console.error("Upload document error:", error);
