@@ -1,6 +1,9 @@
 import prisma from "../config/database";
 import { generateEmbedding } from "./document.embedding";
 
+// Initial retrieval cutoff; calibrate against representative document/question pairs.
+export const DEFAULT_MIN_SIMILARITY = 0.35;
+
 interface SearchResult {
   chunkId: string;
   documentId: string;
@@ -14,8 +17,12 @@ export const searchDocumentChunks = async (
   organizationId: string,
   query: string,
   topK: number,
+  minSimilarity: number = DEFAULT_MIN_SIMILARITY,
 ): Promise<SearchResult[]> => {
   if (!organizationId.trim()) throw new Error("Organization context is required");
+  if (!Number.isFinite(minSimilarity) || minSimilarity < 0 || minSimilarity > 1) {
+    throw new Error("minSimilarity must be a number from 0 to 1");
+  }
   const embedding = await generateEmbedding(query);
   if (embedding.length !== 384 || !embedding.every(Number.isFinite) || !embedding.some(value => value !== 0)) {
     throw new Error("Invalid query embedding");
@@ -39,6 +46,7 @@ export const searchDocumentChunks = async (
     SELECT "chunkId", "documentId", "documentName", "chunkIndex", "content",
            1 - ("embedding" <=> ${vector}::vector(384)) AS "similarity"
     FROM eligible
+    WHERE 1 - ("embedding" <=> ${vector}::vector(384)) >= ${minSimilarity}
     ORDER BY "embedding" <=> ${vector}::vector(384), "chunkId"
     LIMIT ${topK}
   `;

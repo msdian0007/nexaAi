@@ -1,0 +1,32 @@
+NexaAI Demo Employee Handbook
+Fictional policies for testing document upload and semantic search.
+
+PAID ANNUAL LEAVE
+Full-time employees receive 18 days of paid annual leave per calendar year.
+Submit planned leave requests through the employee portal at least five working days before the leave begins. Your reporting manager approves the request.
+Employees can carry forward up to five unused annual leave days into the next year. Carried-forward days expire on March 31.
+
+SICK LEAVE
+Employees receive 10 days of paid sick leave per calendar year.
+Notify your reporting manager before 10:00 AM when you cannot work because of illness. A medical certificate is required for sick leave lasting more than two consecutive working days.
+
+WORKING HOURS AND REMOTE WORK
+Standard working hours are 9:30 AM to 6:30 PM, Monday through Friday, including a one-hour lunch break.
+Employees may work remotely up to two days per week with prior approval from their reporting manager. Customer-facing meetings must still be attended at the scheduled time.
+
+LEARNING AND DEVELOPMENT
+Each employee has an annual learning budget of INR 20,000 for job-related courses, books, and certification exams.
+Manager approval is required before purchasing a course or booking an exam. Submit the receipt through the expense portal within 30 days of payment. Unused learning budget does not carry forward.
+
+BUSINESS TRAVEL
+Business travel requires manager approval before tickets or accommodation are booked.
+The hotel reimbursement limit is INR 4,000 per night. The meal reimbursement limit is INR 800 per day. Itemized receipts are required. Submit travel expenses within 15 days after returning from the trip.
+
+IT SUPPORT AND SECURITY
+Report laptop, software, and account-access problems to helpdesk@example.com.
+IT support operates from 9:00 AM to 7:00 PM on working days. Report a lost company laptop immediately to both IT support and your reporting manager.
+Multi-factor authentication is mandatory for company email and the employee portal. Never share passwords or authentication codes.
+
+ONBOARDING
+New employees must complete security awareness training within seven calendar days of joining.
+Their reporting manager assigns an onboarding buddy on the first working day. The initial probation period is three months.

@@ -85,7 +85,7 @@ async function search(body, authorization = token) {
 }
 
 test("ranks real semantic matches and excludes other tenants and incomplete content", async () => {
-  const response = await search({ query: question, organizationId: tenants[1] });
+  const response = await search({ query: question, minSimilarity: 0, organizationId: tenants[1] });
   assert.equal(response.status, 200);
   const results = response.body.data.results;
   assert.equal(results.length, 2);
@@ -104,6 +104,60 @@ test("an organization with no indexed documents receives an empty list", async (
   const response = await search({ query: question }, emptyToken);
   assert.equal(response.status, 200);
   assert.deepEqual(response.body.data.results, []);
+  assert.equal(response.body.data.hasMatches, false);
+  assert.equal(response.body.message, "No relevant information found");
+});
+
+test("default threshold retains relevant matches without filling remaining slots with weak matches", async () => {
+  for (const query of [question, "How many vacation days can I take?"]) {
+    const response = await search({ query, topK: 10 });
+    assert.equal(response.status, 200);
+    assert.equal(response.body.data.minSimilarity, 0.35);
+    assert.equal(response.body.data.hasMatches, true);
+    assert.equal(response.body.data.results.length, 1);
+    assert.equal(response.body.data.results[0].chunkId, ownChunk.id);
+    assert.ok(response.body.data.results.every(result => result.similarity >= 0.35));
+  }
+});
+
+test("unrelated questions return successful empty searches instead of weak evidence", async () => {
+  for (const query of ["What does my car insurance cover?", "How far is Jupiter from the sun?"]) {
+    const response = await search({ query });
+    assert.equal(response.status, 200);
+    assert.equal(response.body.success, true);
+    assert.equal(response.body.message, "No relevant information found");
+    assert.equal(response.body.data.hasMatches, false);
+    assert.deepEqual(response.body.data.results, []);
+  }
+});
+
+test("a stricter threshold can remove a relevant match; explicit zero is respected", async () => {
+  const strict = await search({ query: question, minSimilarity: 0.65 });
+  assert.equal(strict.status, 200);
+  assert.equal(strict.body.data.minSimilarity, 0.65);
+  assert.equal(strict.body.data.hasMatches, false);
+  assert.deepEqual(strict.body.data.results, []);
+  const relaxed = await search({ query: question, minSimilarity: 0 });
+  assert.equal(relaxed.body.data.minSimilarity, 0);
+  assert.equal(relaxed.body.data.results.length, 2);
+  assert.equal((await search({ query: question, minSimilarity: 1 })).status, 200);
+});
+
+test("threshold comparisons use full precision and include a result exactly at the boundary", async () => {
+  const initial = await search({ query: question, minSimilarity: 0 });
+  const score = initial.body.data.results[0].similarity;
+  const inclusive = await search({ query: question, minSimilarity: score });
+  assert.equal(inclusive.body.data.results[0].chunkId, ownChunk.id);
+  const excluded = await search({ query: question, minSimilarity: score + 0.000001 });
+  assert.deepEqual(excluded.body.data.results, []);
+});
+
+test("rejects invalid threshold values", async () => {
+  for (const minSimilarity of [-0.01, 1.01, "0.35", null, true, [], {}]) {
+    const response = await search({ query: question, minSimilarity });
+    assert.equal(response.status, 400);
+    assert.equal(response.body.message, "minSimilarity must be a number from 0 to 1");
+  }
 });
 
 test("validates query and topK before running search", async () => {
