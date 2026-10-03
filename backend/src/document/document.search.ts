@@ -4,7 +4,7 @@ import { generateEmbedding } from "./document.embedding";
 // Initial retrieval cutoff; calibrate against representative document/question pairs.
 export const DEFAULT_MIN_SIMILARITY = 0.35;
 
-interface SearchResult {
+export interface SearchResult {
   chunkId: string;
   documentId: string;
   documentName: string;

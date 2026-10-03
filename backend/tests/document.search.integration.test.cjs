@@ -95,6 +95,11 @@ test("ranks real semantic matches and excludes other tenants and incomplete cont
   assert.equal(results[0].content, ownChunk.content);
   assert.ok(results[0].similarity > results[1].similarity);
   assert.ok(results.every(result => Number.isFinite(result.similarity) && result.chunkId !== otherChunk.id));
+  const context = response.body.data.context;
+  assert.equal(context.hasContext, true);
+  assert.deepEqual(context.sources.map(source => source.chunkId), results.map(result => result.chunkId));
+  assert.deepEqual(JSON.parse(context.text).map(excerpt => excerpt.content), results.map(result => result.content));
+  assert.ok(context.charCount <= context.maxChars);
   assert.equal((await search({ query: question, topK: 1 })).body.data.results.length, 1);
 });
 
@@ -105,6 +110,9 @@ test("an organization with no indexed documents receives an empty list", async (
   assert.equal(response.status, 200);
   assert.deepEqual(response.body.data.results, []);
   assert.equal(response.body.data.hasMatches, false);
+  assert.equal(response.body.data.context.hasContext, false);
+  assert.equal(response.body.data.context.text, "");
+  assert.deepEqual(response.body.data.context.sources, []);
   assert.equal(response.body.message, "No relevant information found");
 });
 
@@ -128,6 +136,8 @@ test("unrelated questions return successful empty searches instead of weak evide
     assert.equal(response.body.message, "No relevant information found");
     assert.equal(response.body.data.hasMatches, false);
     assert.deepEqual(response.body.data.results, []);
+    assert.equal(response.body.data.context.hasContext, false);
+    assert.deepEqual(response.body.data.context.sources, []);
   }
 });
 
