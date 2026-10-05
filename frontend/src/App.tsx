@@ -5,6 +5,7 @@ import { useAuth } from "./features/auth/auth.context";
 import { ProtectedRoute } from "./features/auth/ProtectedRoute";
 import "./App.css";
 import { DocumentsPage } from './features/documents/DocumentsPage';
+import { ChatPage } from './features/chat/ChatPage';
 
 function AuthPage({ mode }: { mode: "login" | "register" }) {
   const { status, signIn, notice } = useAuth();
@@ -55,6 +56,7 @@ function Dashboard() {
           Upload documents to prepare your organization’s knowledge for questions.
         </p>
         <Link className="text-button" to="/documents">Upload a document</Link>
+        {' '}<Link className="text-button" to="/chat">Ask a question</Link>
       </div>
     </section>
   );
@@ -77,7 +79,8 @@ function AppRoutes() {
             {status === "authenticated" && (
               <><Link className="text-button" to="/dashboard">
                 Dashboard
-              </Link>{' '}<Link className="text-button" to="/documents">Documents</Link></>
+              </Link>{' '}<Link className="text-button" to="/documents">Documents</Link>{' '}
+              <Link className="text-button" to="/chat">Chat</Link></>
             )}{" "}
             <button className="secondary-button" onClick={signOut}>
               Sign out
@@ -101,6 +104,8 @@ function AppRoutes() {
           <Route element={<ProtectedRoute />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/documents" element={<DocumentsPage />} />
+            {/* Chat shares the same verified-session guard as the other workspace pages. */}
+            <Route path="/chat" element={<ChatPage />} />
           </Route>
           <Route
             path="*"

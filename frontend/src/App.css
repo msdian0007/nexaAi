@@ -219,3 +219,14 @@ dd {
 .document-name { overflow-wrap: anywhere; }
 .app-header nav { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 @media (max-width: 500px) { .app-header { gap: 12px; } .app-header nav { font-size: 13px; } }
+
+/* Keep question and answer text readable on desktop and narrow screens. */
+.question-panel, .answer-panel { padding: 24px; margin: 24px 0; border: 1px solid #dce5e7; border-radius: 12px; background: white; }
+.question-panel textarea { width: 100%; resize: vertical; min-height: 110px; padding: 12px; border: 1px solid #b9c9ce; border-radius: 7px; font: inherit; color: inherit; background: white; }
+.question-panel .primary-button { max-width: 240px; margin-top: 0; }
+#question-help { font-size: 13px; }
+.answer-text { white-space: pre-wrap; overflow-wrap: anywhere; color: #172b35; }
+.asked-question { overflow-wrap: anywhere; }
+.source-list { list-style: none; padding: 0; display: grid; gap: 12px; }
+.source-list li { padding: 14px; border-radius: 8px; background: #edf4f2; overflow-wrap: anywhere; }
+.source-list span { display: block; font-size: 13px; margin-top: 6px; color: #53666e; }
