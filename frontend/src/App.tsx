@@ -4,6 +4,7 @@ import { AuthProvider } from "./features/auth/AuthProvider";
 import { useAuth } from "./features/auth/auth.context";
 import { ProtectedRoute } from "./features/auth/ProtectedRoute";
 import "./App.css";
+import { DocumentsPage } from './features/documents/DocumentsPage';
 
 function AuthPage({ mode }: { mode: "login" | "register" }) {
   const { status, signIn, notice } = useAuth();
@@ -51,9 +52,9 @@ function Dashboard() {
       <div className="workspace-note">
         <h2>Your knowledge workspace</h2>
         <p>
-          Document management and chat will be available here as we build the
-          next steps.
+          Upload documents to prepare your organization’s knowledge for questions.
         </p>
+        <Link className="text-button" to="/documents">Upload a document</Link>
       </div>
     </section>
   );
@@ -74,9 +75,9 @@ function AppRoutes() {
         {status !== "anonymous" && (
           <nav aria-label="Workspace">
             {status === "authenticated" && (
-              <Link className="text-button" to="/dashboard">
+              <><Link className="text-button" to="/dashboard">
                 Dashboard
-              </Link>
+              </Link>{' '}<Link className="text-button" to="/documents">Documents</Link></>
             )}{" "}
             <button className="secondary-button" onClick={signOut}>
               Sign out
@@ -99,6 +100,7 @@ function AppRoutes() {
           <Route path="/register" element={<AuthPage mode="register" />} />
           <Route element={<ProtectedRoute />}>
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/documents" element={<DocumentsPage />} />
           </Route>
           <Route
             path="*"

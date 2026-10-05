@@ -51,6 +51,8 @@ test("a real upload completes with extracted text, chunks, and 384-dimensional v
     });
     const body = await response.json();
     assert.equal(response.status, 201, JSON.stringify(body));
+    assert.equal(body.success, true);
+    assert.deepEqual(body.data, body.document);
     const document = await prisma.document.findUniqueOrThrow({
       where: { id: body.document.id }, include: { chunks: { orderBy: { chunkIndex: "asc" } } },
     });

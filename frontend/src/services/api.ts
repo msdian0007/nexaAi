@@ -39,7 +39,8 @@ export function createApiClient(
       throw new ApiError("Invalid API path", 0, "INVALID_PATH");
     }
     const headers: Record<string, string> = { Accept: "application/json" };
-    if (options.body !== undefined)
+    const multipart = options.body instanceof FormData;
+    if (options.body !== undefined && !multipart)
       headers["Content-Type"] = "application/json";
     if (options.token) headers.Authorization = `Bearer ${options.token}`;
 
@@ -52,7 +53,7 @@ export function createApiClient(
         method: options.method ?? "GET",
         headers,
         body:
-          options.body === undefined ? undefined : JSON.stringify(options.body),
+          multipart ? options.body as FormData : options.body === undefined ? undefined : JSON.stringify(options.body),
         signal,
         redirect: "error",
         credentials: "omit",

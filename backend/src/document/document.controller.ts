@@ -135,7 +135,10 @@ export const uploadDocument = async (
     }
 
     return res.status(201).json({
+      success: true,
       message: "Document uploaded successfully",
+      data: completedDocument,
+      // Retained for existing API consumers.
       document: completedDocument,
     });
   } catch (error) {
@@ -146,4 +149,3 @@ export const uploadDocument = async (
     });
   }
 };
-
