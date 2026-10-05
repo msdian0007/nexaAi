@@ -1,0 +1,201 @@
+{
+  "startedAt": "2026-10-04T07:59:20.963Z",
+  "model": "gemini-3.1-flash-lite",
+  "scope": "Real HTTP, JWT, PostgreSQL retrieval, local embeddings and Gemini; pre-indexed fictional fixtures (upload pipeline excluded).",
+  "reviewRequired": "Automated checks cover expected status, key facts, evidence isolation and source mapping. Read answers to assess factual support and limitations; a passing run is not proof of general reliability.",
+  "cases": [
+    {
+      "id": "supported",
+      "question": "How many days of paid annual leave do full-time employees receive per calendar year?",
+      "documents": [
+        "Full-time employees receive 18 days of paid annual leave per calendar year."
+      ],
+      "expectedStatus": "answered",
+      "httpStatus": 200,
+      "providerCalls": 1,
+      "elapsedMs": 1954,
+      "evidence": [
+        {
+          "sourceId": "S1",
+          "content": "Full-time employees receive 18 days of paid annual leave per calendar year."
+        }
+      ],
+      "response": {
+        "success": true,
+        "data": {
+          "question": "How many days of paid annual leave do full-time employees receive per calendar year?",
+          "status": "answered",
+          "answer": "Full-time employees receive 18 days of paid annual leave per calendar year [S1].",
+          "citations": [
+            "S1"
+          ],
+          "sources": [
+            {
+              "sourceId": "S1",
+              "chunkId": "1fb5cde8-6620-4194-bf34-4dfd6bebc36f",
+              "documentId": "10c6eecb-d896-41ae-a028-b583cd3dbbc7",
+              "documentName": "fictional-policy-1.txt",
+              "chunkIndex": 0,
+              "similarity": 0.8760373518489601
+            }
+          ]
+        }
+      },
+      "checks": {
+        "httpSuccess": true,
+        "expectedStatus": true,
+        "expectedProviderCalls": true,
+        "evidenceIsolated": true,
+        "keyFactsPresent": true,
+        "expectedSourceCount": true,
+        "sourcesBelongToFixture": true
+      },
+      "passed": true
+    },
+    {
+      "id": "unrelated",
+      "question": "How far is Jupiter from the sun?",
+      "documents": [
+        "Full-time employees receive 18 days of paid annual leave per calendar year."
+      ],
+      "expectedStatus": "insufficient_information",
+      "httpStatus": 200,
+      "providerCalls": 0,
+      "elapsedMs": 26,
+      "evidence": [],
+      "response": {
+        "success": true,
+        "data": {
+          "question": "How far is Jupiter from the sun?",
+          "status": "insufficient_information",
+          "answer": "I couldn't find enough information in your organization's indexed documents to answer this question.",
+          "citations": [],
+          "sources": []
+        }
+      },
+      "checks": {
+        "httpSuccess": true,
+        "expectedStatus": true,
+        "expectedProviderCalls": true,
+        "evidenceIsolated": true,
+        "keyFactsPresent": true,
+        "expectedSourceCount": true,
+        "sourcesBelongToFixture": true
+      },
+      "passed": true
+    },
+    {
+      "id": "partial",
+      "question": "How many days of paid annual leave do full-time employees receive, and how many unused annual leave days can they carry over to next year?",
+      "documents": [
+        "Full-time employees receive 18 days of paid annual leave per calendar year."
+      ],
+      "expectedStatus": "insufficient_information",
+      "httpStatus": 200,
+      "providerCalls": 1,
+      "elapsedMs": 1401,
+      "evidence": [
+        {
+          "sourceId": "S1",
+          "content": "Full-time employees receive 18 days of paid annual leave per calendar year."
+        }
+      ],
+      "response": {
+        "success": true,
+        "data": {
+          "question": "How many days of paid annual leave do full-time employees receive, and how many unused annual leave days can they carry over to next year?",
+          "status": "insufficient_information",
+          "answer": "Full-time employees receive 18 days of paid annual leave per calendar year [S1]. The provided evidence does not contain information regarding how many unused annual leave days employees can carry over to the next year.",
+          "citations": [
+            "S1"
+          ],
+          "sources": [
+            {
+              "sourceId": "S1",
+              "chunkId": "c614ce07-feef-41a3-8806-0198a9d9d0b4",
+              "documentId": "1c26199c-5b81-42e7-ab36-39b4644167e7",
+              "documentName": "fictional-policy-1.txt",
+              "chunkIndex": 0,
+              "similarity": 0.8092928869796612
+            }
+          ]
+        }
+      },
+      "checks": {
+        "httpSuccess": true,
+        "expectedStatus": true,
+        "expectedProviderCalls": true,
+        "evidenceIsolated": true,
+        "keyFactsPresent": true,
+        "expectedSourceCount": true,
+        "sourcesBelongToFixture": true
+      },
+      "passed": true
+    },
+    {
+      "id": "conflicting",
+      "question": "How many days of paid annual leave do full-time employees receive per calendar year?",
+      "documents": [
+        "Full-time employees receive 18 days of paid annual leave per calendar year.",
+        "Full-time employees receive 25 days of paid annual leave per calendar year."
+      ],
+      "expectedStatus": "conflicting_evidence",
+      "httpStatus": 200,
+      "providerCalls": 1,
+      "elapsedMs": 1526,
+      "evidence": [
+        {
+          "sourceId": "S1",
+          "content": "Full-time employees receive 25 days of paid annual leave per calendar year."
+        },
+        {
+          "sourceId": "S2",
+          "content": "Full-time employees receive 18 days of paid annual leave per calendar year."
+        }
+      ],
+      "response": {
+        "success": true,
+        "data": {
+          "question": "How many days of paid annual leave do full-time employees receive per calendar year?",
+          "status": "conflicting_evidence",
+          "answer": "There is a conflict in the provided evidence regarding the number of paid annual leave days for full-time employees. One source states that full-time employees receive 25 days of paid annual leave per calendar year [S1], while another source states that they receive 18 days per calendar year [S2].",
+          "citations": [
+            "S1",
+            "S2"
+          ],
+          "sources": [
+            {
+              "sourceId": "S1",
+              "chunkId": "29a787ce-e326-432a-a49a-d01aa6da6715",
+              "documentId": "f123f8de-3933-4439-8999-9b6c98e97011",
+              "documentName": "fictional-policy-2.txt",
+              "chunkIndex": 0,
+              "similarity": 0.8792013597965195
+            },
+            {
+              "sourceId": "S2",
+              "chunkId": "54d1d107-7f75-422c-b26a-d8485d7437ac",
+              "documentId": "035f5665-7975-4844-9fff-6c2c61a30896",
+              "documentName": "fictional-policy-1.txt",
+              "chunkIndex": 0,
+              "similarity": 0.8760373518489601
+            }
+          ]
+        }
+      },
+      "checks": {
+        "httpSuccess": true,
+        "expectedStatus": true,
+        "expectedProviderCalls": true,
+        "evidenceIsolated": true,
+        "keyFactsPresent": true,
+        "expectedSourceCount": true,
+        "sourcesBelongToFixture": true
+      },
+      "passed": true
+    }
+  ],
+  "cleanupCompleted": true,
+  "completedAt": "2026-10-04T07:59:27.303Z",
+  "passed": true
+}
