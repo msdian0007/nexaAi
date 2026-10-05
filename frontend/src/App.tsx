@@ -1,63 +1,126 @@
-import { useState } from "react";
-import type { AuthSession } from "./features/auth/auth.api";
+import { BrowserRouter, Link, Navigate, Route, Routes } from "react-router-dom";
 import { AuthForm } from "./features/auth/AuthForm";
+import { AuthProvider } from "./features/auth/AuthProvider";
+import { useAuth } from "./features/auth/auth.context";
+import { ProtectedRoute } from "./features/auth/ProtectedRoute";
 import "./App.css";
 
-export default function App() {
-  const [session, setSession] = useState<AuthSession | null>(null);
+function AuthPage({ mode }: { mode: "login" | "register" }) {
+  const { status, signIn, notice } = useAuth();
+  if (status !== "anonymous") return <Navigate to="/dashboard" replace />;
+  return (
+    <>
+      {notice && (
+        <p className="form-error" role="alert">
+          {notice}
+        </p>
+      )}
+      <AuthForm key={mode} mode={mode} onAuthenticated={signIn} />
+    </>
+  );
+}
+
+function Dashboard() {
+  const { session } = useAuth();
+  if (!session) return null;
+  return (
+    <section className="workspace" aria-labelledby="welcome-heading">
+      <p className="eyebrow">YOUR WORKSPACE</p>
+      <h1
+        id="welcome-heading"
+        tabIndex={-1}
+        ref={(element) => element?.focus()}
+      >
+        Welcome, {session.user.name}
+      </h1>
+      <p>You are signed in to {session.organization.name}.</p>
+      <dl className="account-details">
+        <div>
+          <dt>Email</dt>
+          <dd>{session.user.email}</dd>
+        </div>
+        <div>
+          <dt>Organization</dt>
+          <dd>{session.organization.name}</dd>
+        </div>
+        <div>
+          <dt>Role</dt>
+          <dd>{session.role}</dd>
+        </div>
+      </dl>
+      <div className="workspace-note">
+        <h2>Your knowledge workspace</h2>
+        <p>
+          Document management and chat will be available here as we build the
+          next steps.
+        </p>
+      </div>
+    </section>
+  );
+}
+
+function AppRoutes() {
+  const { status, signOut } = useAuth();
   return (
     <div className="app-shell">
       <header className="app-header">
-        <span className="brand">
+        <Link className="brand" to="/">
+          {" "}
           <span className="brand-mark" aria-hidden="true">
             N
           </span>{" "}
           NexaAI
-        </span>
-        {session && (
-          <button className="secondary-button" onClick={() => setSession(null)}>
-            Sign out
-          </button>
+        </Link>
+        {status !== "anonymous" && (
+          <nav aria-label="Workspace">
+            {status === "authenticated" && (
+              <Link className="text-button" to="/dashboard">
+                Dashboard
+              </Link>
+            )}{" "}
+            <button className="secondary-button" onClick={signOut}>
+              Sign out
+            </button>
+          </nav>
         )}
       </header>
       <main>
-        {!session ? (
-          <AuthForm onAuthenticated={setSession} />
-        ) : (
-          <section className="workspace" aria-labelledby="welcome-heading">
-            <p className="eyebrow">YOUR WORKSPACE</p>
-            <h1
-              id="welcome-heading"
-              tabIndex={-1}
-              ref={(element) => element?.focus()}
-            >
-              Welcome, {session.user.name}
-            </h1>
-            <p>You’re signed in to {session.organization.name}.</p>
-            <dl className="account-details">
-              <div>
-                <dt>Email</dt>
-                <dd>{session.user.email}</dd>
-              </div>
-              <div>
-                <dt>Organization</dt>
-                <dd>{session.organization.name}</dd>
-              </div>
-              <div>
-                <dt>Role</dt>
-                <dd>{session.role}</dd>
-              </div>
-            </dl>
-            <div className="workspace-note">
-              <h2>Your knowledge workspace</h2>
-              <p>
-                Document management and chat will be available here as we build
-                the next steps.
-              </p>
-            </div>
-          </section>
-        )}
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <Navigate
+                to={status === "anonymous" ? "/login" : "/dashboard"}
+                replace
+              />
+            }
+          />
+          <Route path="/login" element={<AuthPage mode="login" />} />
+          <Route path="/register" element={<AuthPage mode="register" />} />
+          <Route element={<ProtectedRoute />}>
+            <Route path="/dashboard" element={<Dashboard />} />
+          </Route>
+          <Route
+            path="*"
+            element={
+              <section className="workspace">
+                <h1>Page not found</h1>
+                <Link to="/">Return home</Link>
+              </section>
+            }
+          />
+        </Routes>
       </main>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
+    </BrowserRouter>
   );
 }

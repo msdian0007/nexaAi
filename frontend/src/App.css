@@ -206,3 +206,8 @@ dd {
     grid-template-columns: 1fr;
   }
 }
+
+.brand {
+  color: inherit;
+  text-decoration: none;
+}

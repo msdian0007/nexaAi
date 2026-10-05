@@ -3,13 +3,16 @@ import type { FormEvent } from "react";
 import { login, register } from "./auth.api";
 import type { AuthSession } from "./auth.api";
 import { ApiError } from "../../services/api";
+import { useNavigate } from "react-router-dom";
 
 export function AuthForm({
   onAuthenticated,
+  mode,
 }: {
   onAuthenticated: (session: AuthSession) => void;
+  mode: "login" | "register";
 }) {
-  const [mode, setMode] = useState<"login" | "register">("login");
+  const navigate = useNavigate();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const activeRequest = useRef<AbortController | null>(null);
@@ -172,7 +175,7 @@ export function AuthForm({
             className="text-button"
             onClick={() => {
               setError("");
-              setMode(registering ? "login" : "register");
+              navigate(registering ? "/login" : "/register");
             }}
           >
             {registering ? "Sign in" : "Create an account"}

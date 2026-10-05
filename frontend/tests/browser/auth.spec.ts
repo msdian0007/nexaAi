@@ -7,6 +7,20 @@ const session = {
   role: "OWNER",
 };
 
+test.beforeEach(async ({ page }) => {
+  await page.route("**/api/v1/auth/me", async (route) => {
+    expect(route.request().headers().authorization).toBe(
+      `Bearer ${session.token}`,
+    );
+    await route.fulfill({
+      json: {
+        success: true,
+        data: { userId: "u", organizationId: "o", role: "OWNER" },
+      },
+    });
+  });
+});
+
 test("login shows returned identity, sign out clears it, and refresh loses the session", async ({
   page,
 }) => {
