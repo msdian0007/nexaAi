@@ -212,21 +212,135 @@ dd {
   text-decoration: none;
 }
 
-.upload-panel, .upload-result { background: white; border: 1px solid #dce5e7; padding: 24px; border-radius: 12px; margin-bottom: 24px; }
-.upload-panel .primary-button { max-width: 300px; margin-top: 8px; }
-.upload-panel p, .upload-result p, .session-note { font-size: 14px; }
-.upload-panel input { margin-bottom: 12px; }
-.document-name { overflow-wrap: anywhere; }
-.app-header nav { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
-@media (max-width: 500px) { .app-header { gap: 12px; } .app-header nav { font-size: 13px; } }
+.upload-panel,
+.upload-result {
+  background: white;
+  border: 1px solid #dce5e7;
+  padding: 24px;
+  border-radius: 12px;
+  margin-bottom: 24px;
+}
+.upload-panel .primary-button {
+  max-width: 300px;
+  margin-top: 8px;
+}
+.upload-panel p,
+.upload-result p,
+.session-note {
+  font-size: 14px;
+}
+.upload-panel input {
+  margin-bottom: 12px;
+}
+.document-name {
+  overflow-wrap: anywhere;
+}
+.app-header nav {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+@media (max-width: 500px) {
+  .app-header {
+    gap: 12px;
+  }
+  .app-header nav {
+    font-size: 13px;
+  }
+}
 
 /* Keep question and answer text readable on desktop and narrow screens. */
-.question-panel, .answer-panel { padding: 24px; margin: 24px 0; border: 1px solid #dce5e7; border-radius: 12px; background: white; }
-.question-panel textarea { width: 100%; resize: vertical; min-height: 110px; padding: 12px; border: 1px solid #b9c9ce; border-radius: 7px; font: inherit; color: inherit; background: white; }
-.question-panel .primary-button { max-width: 240px; margin-top: 0; }
-#question-help { font-size: 13px; }
-.answer-text { white-space: pre-wrap; overflow-wrap: anywhere; color: #172b35; }
-.asked-question { overflow-wrap: anywhere; }
-.source-list { list-style: none; padding: 0; display: grid; gap: 12px; }
-.source-list li { padding: 14px; border-radius: 8px; background: #edf4f2; overflow-wrap: anywhere; }
-.source-list span { display: block; font-size: 13px; margin-top: 6px; color: #53666e; }
+.question-panel,
+.answer-panel {
+  padding: 24px;
+  margin: 24px 0;
+  border: 1px solid #dce5e7;
+  border-radius: 12px;
+  background: white;
+}
+.question-panel textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 110px;
+  padding: 12px;
+  border: 1px solid #b9c9ce;
+  border-radius: 7px;
+  font: inherit;
+  color: inherit;
+  background: white;
+}
+.question-panel .primary-button {
+  max-width: 240px;
+  margin-top: 0;
+}
+#question-help {
+  font-size: 13px;
+}
+.answer-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: #172b35;
+}
+.asked-question {
+  overflow-wrap: anywhere;
+}
+.source-list {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+.source-list li {
+  padding: 14px;
+  border-radius: 8px;
+  background: #edf4f2;
+  overflow-wrap: anywhere;
+}
+.source-list span {
+  display: block;
+  font-size: 13px;
+  margin-top: 6px;
+  color: #53666e;
+}
+
+/* Stack the history list above the conversation on narrow screens. */
+.chat-page {
+  max-width: none;
+}
+.history-layout {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: 28px;
+  margin-top: 28px;
+}
+.conversation-list {
+  min-width: 0;
+}
+.conversation-list ul {
+  list-style: none;
+  padding: 0;
+}
+.conversation-choice {
+  width: 100%;
+  text-align: left;
+  padding: 12px;
+  border: 1px solid #dce5e7;
+  background: white;
+  border-radius: 7px;
+  margin-bottom: 8px;
+  overflow-wrap: anywhere;
+}
+.conversation-choice[aria-pressed="true"] {
+  background: #e9f2ef;
+  border-color: #126b63;
+}
+.conversation-content {
+  min-width: 0;
+}
+@media (max-width: 750px) {
+  .history-layout {
+    grid-template-columns: 1fr;
+  }
+}

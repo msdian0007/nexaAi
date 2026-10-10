@@ -1,5 +1,8 @@
 import { test, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
+import { randomUUID } from 'node:crypto';
+const conversationId = '11111111-1111-4111-8111-111111111111';
+const saved = () => ({ conversationId, userMessageId: randomUUID(), assistantMessageId: randomUUID() });
 
 const source = { sourceId: 'S1', documentId: 'doc', chunkId: 'chunk', documentName: 'handbook.txt', chunkIndex: 0, similarity: 0.8 };
 const question = 'How much annual leave do employees receive?';
@@ -7,6 +10,7 @@ const question = 'How much annual leave do employees receive?';
 // Mock HTTP responses, not React state: these tests exercise the actual form,
 // authenticated client, routing, and source rendering without spending model quota.
 test.beforeEach(async ({ page }) => {
+  await page.route('**/api/v1/chat/conversations?*', route => route.fulfill({ json: { success: true, data: { conversations: [], page: { hasMore: false, nextCursor: null } } } }));
   await page.route('**/api/v1/auth/login', route => route.fulfill({ json: { success: true, data: {
     token: 'test-token', user: { id: 'u', name: 'Asha', email: 'asha@example.invalid' },
     organization: { id: 'o', name: 'Sample Team', slug: 'sample-team' }, role: 'OWNER',
@@ -33,7 +37,7 @@ test('sends a single trimmed question with token, blocks duplicates, and renders
     expect(route.request().headers().authorization).toBe('Bearer test-token');
     expect(route.request().postDataJSON()).toEqual({ question });
     await gate;
-    await route.fulfill({ json: { success: true, data: { question, status: 'answered',
+    await route.fulfill({ json: { success: true, data: { ...saved(), question, status: 'answered',
       answer: '18 days [S1]. <img src=x onerror=alert(1)>', citations: ['S1'], sources: [source] } } });
   });
   await ask(page, ` ${question} `);
@@ -55,11 +59,11 @@ test('distinguishes missing evidence, partial answers, and conflicting evidence'
       sources: [source, { ...source, sourceId: 'S2', documentName: 'other-policy.txt', chunkId: 'other' }] },
   ];
   let index = 0;
-  await page.route('**/api/v1/chat/query', route => route.fulfill({ json: { success: true, data: { question, ...answers[index++] } } }));
+  await page.route('**/api/v1/chat/query', route => route.fulfill({ json: { success: true, data: { ...saved(), question, ...answers[index++] } } }));
   for (const answer of answers) {
     await ask(page);
-    await expect(page.locator('.answer-text')).toHaveText(answer.answer);
-    await expect(page.locator('.source-list li')).toHaveCount(answer.sources.length);
+    await expect(page.locator('.answer-text').last()).toHaveText(answer.answer);
+    await expect(page.locator('.answer-panel').last().locator('.source-list li')).toHaveCount(answer.sources.length);
     await expect(page.getByRole('alert')).toHaveCount(0);
   }
   await expect(page.getByRole('heading', { name: 'Conflicting information' })).toBeVisible();

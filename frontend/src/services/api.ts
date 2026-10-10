@@ -15,6 +15,8 @@ export type RequestOptions = {
   body?: unknown;
   token?: string;
   signal?: AbortSignal;
+  // Keep query values separate from the validated path; URLSearchParams escapes cursors.
+  query?: Record<string, string | number>;
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -49,16 +51,28 @@ export function createApiClient(
       ? AbortSignal.any([options.signal, timeout])
       : timeout;
     try {
-      const response = await fetchImpl(`${base}${path}`, {
-        method: options.method ?? "GET",
-        headers,
-        body:
-          multipart ? options.body as FormData : options.body === undefined ? undefined : JSON.stringify(options.body),
-        signal,
-        redirect: "error",
-        credentials: "omit",
-        cache: "no-store",
-      });
+      const query = new URLSearchParams(
+        Object.entries(options.query ?? {}).map(([key, value]) => [
+          key,
+          String(value),
+        ]),
+      );
+      const response = await fetchImpl(
+        `${base}${path}${query.size ? `?${query}` : ""}`,
+        {
+          method: options.method ?? "GET",
+          headers,
+          body: multipart
+            ? (options.body as FormData)
+            : options.body === undefined
+              ? undefined
+              : JSON.stringify(options.body),
+          signal,
+          redirect: "error",
+          credentials: "omit",
+          cache: "no-store",
+        },
+      );
       const payload: unknown = await response.json().catch(() => null);
       if (!response.ok) {
         // Backend auth handlers may return internal error messages. Use safe UI text.
