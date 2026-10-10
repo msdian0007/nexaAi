@@ -160,8 +160,8 @@ export function ChatPage() {
         </article>
       )}
       <p className="session-note">
-        Only the latest answer is shown here. It is not saved as conversation
-        history.
+        Answers are saved, but only the latest is shown here. Conversation history
+        browsing is not available yet.
       </p>
     </section>
   );

@@ -1,7 +1,7 @@
 import { Response } from "express";
 import { AuthenticatedRequest } from "../auth/auth.middleware";
 import { DEFAULT_MIN_SIMILARITY } from "../document/document.search";
-import { answerDocumentQuestion } from "./rag.service";
+import { answerAndSaveQuestion, ConversationMembershipError, ConversationNotFoundError } from '../conversation/conversation.service';
 import { GeminiProviderError } from "./gemini.provider";
 import { RagResponseValidationError } from "./rag.response";
 
@@ -14,6 +14,16 @@ export const queryDocuments = async (
     return res
       .status(401)
       .json({ success: false, message: "Organization context is missing" });
+  }
+  // Saved history belongs to the signed user and organization, never body IDs.
+  const userId = req.user?.userId;
+  if (typeof userId !== 'string' || !userId.trim()) {
+    return res.status(401).json({ success: false, message: 'User context is missing' });
+  }
+  const conversationId = req.body?.conversationId;
+  if (conversationId !== undefined && (typeof conversationId !== 'string' ||
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(conversationId))) {
+    return res.status(400).json({ success: false, message: 'conversationId must be a UUID when provided' });
   }
   const question = req.body?.question;
   const topK = req.body?.topK === undefined ? 5 : req.body.topK;
@@ -60,16 +70,23 @@ export const queryDocuments = async (
       });
   }
   try {
-    const answer = await answerDocumentQuestion(
-      organizationId,
+    const answer = await answerAndSaveQuestion(
+      { organizationId, userId },
       question.trim(),
       topK,
       minSimilarity,
+      conversationId,
     );
     return res
       .status(200)
       .json({ success: true, data: { question: question.trim(), ...answer } });
   } catch (error) {
+    if (error instanceof ConversationNotFoundError) {
+      return res.status(404).json({ success: false, code: 'CONVERSATION_NOT_FOUND', message: 'Conversation not found' });
+    }
+    if (error instanceof ConversationMembershipError) {
+      return res.status(403).json({ success: false, code: 'MEMBERSHIP_REQUIRED', message: 'You are no longer a member of this organization' });
+    }
     // Log only known codes, never prompts, document passages, credentials or provider bodies.
     if (error instanceof RagResponseValidationError) {
       console.error("RAG response rejected:", error.code);
