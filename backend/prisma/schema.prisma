@@ -52,6 +52,9 @@ model OrganizationMember {
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
+  // Conversation ownership uses this membership, not just an unrelated user ID.
+  conversations Conversation[]
+
   @@unique([userId, organizationId])
   @@index([organizationId])
   @@index([userId])
@@ -109,4 +112,74 @@ model DocumentChunk {
 
   @@index([documentId])
   @@unique([documentId, chunkIndex])
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+}
+
+// These values match the validated RAG response, including partial/no-evidence answers.
+enum AnswerStatus {
+  answered
+  insufficient_information
+  conflicting_evidence
+}
+
+model Conversation {
+  id             String   @id @default(uuid())
+  organizationId String
+  userId         String
+  title          String   @db.VarChar(200)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // The composite foreign key requires the owner to belong to this organization.
+  // Removing that membership deletes its private conversations and their messages.
+  owner OrganizationMember @relation(fields: [userId, organizationId], references: [userId, organizationId], onDelete: Cascade)
+  messages Message[]
+
+  // This key lets child records enforce that their organization matches the parent.
+  @@unique([id, organizationId])
+  @@index([organizationId, userId, updatedAt, id])
+  @@index([userId, organizationId])
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  conversationId String
+  organizationId String
+  role           MessageRole
+  content        String
+  // Explicit ordering avoids ambiguous timestamps when a question/answer are saved together.
+  sequence       Int
+  // User questions have no answer status. Assistant messages store validated outcomes.
+  answerStatus   AnswerStatus?
+  createdAt      DateTime     @default(now())
+
+  conversation Conversation @relation(fields: [conversationId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  sources MessageSource[]
+
+  @@unique([id, organizationId])
+  @@unique([conversationId, sequence])
+  @@index([organizationId, conversationId])
+}
+
+model MessageSource {
+  id             String @id @default(uuid())
+  messageId      String
+  organizationId String
+  sourceId       String
+  // Snapshot metadata, deliberately without document/chunk foreign keys:
+  // renaming, reprocessing or deleting a document must not rewrite a historical citation.
+  documentId     String
+  chunkId        String
+  documentName   String
+  chunkIndex     Int
+  similarity     Float
+
+  message Message @relation(fields: [messageId, organizationId], references: [id, organizationId], onDelete: Cascade)
+
+  @@unique([messageId, sourceId])
+  @@index([organizationId, messageId])
 }
