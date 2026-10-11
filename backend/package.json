@@ -8,6 +8,7 @@
     "build": "tsc",
     "start": "node dist/src/app.js",
     "check:redis": "npm run build && node scripts/check-redis.cjs",
+    "test:document-queue": "npm run build && node --test tests/document.queue.integration.test.cjs",
     "test:document-pipeline": "npm run build && node --test tests/document.pipeline.e2e.test.cjs"
   },
   "keywords": [],
@@ -32,6 +33,7 @@
     "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.10.0",
     "bcrypt": "^6.0.0",
+    "bullmq": "^6.3.12",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",

@@ -77,7 +77,7 @@ those tests do not prove a real Redis server is running.
 Stop only Redis with `docker compose stop redis`. Avoid `docker compose down -v`,
 which would also remove this project's database volumes.
 
-## Current verification — 2026-10-10
+## Initial setup — 2026-10-10
 
 - Backend TypeScript build passed; all three connection tests passed.
 - Docker Desktop 4.94.0 installed successfully in per-user mode after its installer
@@ -93,3 +93,28 @@ which would also remove this project's database volumes.
 For an existing terminal that does not yet have Docker on PATH, reopen PowerShell or
 use the installed executable at
 `$env:LOCALAPPDATA\Programs\DockerDesktop\resources\bin\docker.exe`.
+
+## Completed verification — 2026-10-11
+
+After restarting Windows, WSL reports the `docker-desktop` distribution with default
+version 2, and Docker's engine responds with version 29.8.2.
+
+Started only the Redis service with `docker compose up -d --wait --wait-timeout 60 redis`.
+The `nexaai-redis-1` container is healthy and binds only to `127.0.0.1:6379`.
+Compose created the `nexaai_redis_data` volume. The existing PostgreSQL service was
+not started or changed.
+
+The backend build passed. Running `node scripts/check-redis.cjs` against the live
+container returned:
+
+```text
+Redis ready: PONG; noeviction enabled; append-only persistence enabled.
+```
+
+The container's own `redis-cli ping` also returned `PONG`. This verifies backend
+connectivity and the active persistence/eviction configuration; it does not simulate
+crash recovery. The three connection/error-path tests passed during initial setup.
+
+Step 1 is complete. Redis remains running for local development. Next, add the
+BullMQ document-processing queue and verify job submission before integrating a worker
+and changing the upload flow.
