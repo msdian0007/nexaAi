@@ -5,17 +5,18 @@ Last updated: **2026-10-11**.
 ## START HERE: where we are
 
 **Current phase: 11 — Redis and background document processing.**
-**Last completed step: 11.2 — Submit document jobs to a BullMQ queue.**
-**Next implementation step: 11.3 — Build the document worker.**
+**Last completed step: 11.3 — Build and verify the document worker.**
+**Next implementation step: 11.4 — Failure recovery and retries.**
 
-This update explains the project and creates the tracker. It does not implement the worker.
+The worker now processes isolated queued documents successfully. Recovery and connection
+to real uploads remain to be implemented.
 
 | Phase 11 step | Status | What that means |
 | --- | --- | --- |
 | 11.1 Redis setup | DONE | Local Redis runs in Docker; the backend connects successfully. |
 | 11.2 BullMQ producer | DONE | Code can store a processing instruction in Redis; tested with isolated jobs. |
-| 11.3 Worker | NEXT | Build the program that takes a job and processes its document. |
-| 11.4 Failure recovery and retries | PLANNED | Make interrupted or failed work recover safely. |
+| 11.3 Worker | DONE | Worker validates jobs and prepares documents; real Redis/database/embedding tests pass. |
+| 11.4 Failure recovery and retries | NEXT | Make interrupted or failed work recover safely. |
 | 11.5 Connect uploads and status UI | PLANNED | Real uploads use the queue and show processing progress. |
 | 11.6 Full verification | PLANNED | Prove upload, background processing, and document questions work together. |
 
@@ -144,8 +145,8 @@ We tested five submissions for the same document and organization. Redis stored 
 waiting job because all five used the same job ID. This protection lasts while that
 job is retained. It does not guarantee that processing can never run twice after a failure.
 
-**What exists today:** Redis + producer + tested waiting jobs.
-**What comes next:** worker + recovery + connection to real uploads + status updates.
+**What exists today:** Redis + producer + worker + tested document preparation.
+**What comes next:** recovery + connection to real uploads + status updates.
 
 ## 3. How we will work from now on
 
@@ -242,19 +243,19 @@ Goal: a user uploads a file, sees processing status, and can ask questions once 
 ```mermaid
 flowchart LR
     A[11.1 Redis - DONE] --> B[11.2 Producer - DONE]
-    B --> C[11.3 Worker - NEXT]
-    C --> D[11.4 Recovery]
+    B --> C[11.3 Worker - DONE]
+    C --> D[11.4 Recovery - NEXT]
     D --> E[11.5 Upload and UI integration]
     E --> F[11.6 End-to-end validation]
-    style C fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
+    style D fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
 ```
 
 | Step | What we do and why | Example and validation |
 | --- | --- | --- |
 | 11.1 DONE | Run Redis, configure persistence, verify a connection. We need somewhere to store waiting jobs. | Backend sends PING and receives PONG. [Evidence](backend/docs/redis-step-1-connection.md). |
 | 11.2 DONE | Add BullMQ producer, small job payloads, and duplicate protection. We need to submit instructions reliably. | Five equivalent submissions create one waiting test job. [Evidence](backend/docs/redis-step-2-document-queue.md). |
-| 11.3 NEXT | Build a separately started worker; validate job data and organization association; call existing processing code; close connections on shutdown. | A fixture job goes waiting -> active -> completed; its document has text, chunks, and vectors. An incorrect organization is rejected. |
-| 11.4 PLANNED | Define retries, handling of a worker crash, duplicate execution, manual retry, and removal of old job records. Coordinate job state with document state. | Interrupt processing and recover without duplicate chunks or a document stuck forever in PROCESSING. A failed retained job can be retried deliberately. |
+| 11.3 DONE | Added a worker entry point; validate job data and organization association; call existing processing code; close connections on shutdown. | Real worker tests produced two chunks with 384-dimensional vectors, rejected invalid jobs, and verified idle shutdown. [Evidence](backend/docs/redis-step-3-document-worker.md). |
+| 11.4 NEXT | Define retries, handling of a worker crash, duplicate execution, manual retry, and removal of old job records. Coordinate job state with document state. | Interrupt processing and recover without duplicate chunks or a document stuck forever in PROCESSING. A failed retained job can be retried deliberately. |
 | 11.5 PLANNED | Connect the upload API to the producer; return accepted/processing status; update the frontend to check status. Handle a saved file whose queue submission fails. | The upload request returns before extraction finishes; the screen changes to Ready or Failed later. Redis failure does not produce a false success. |
 | 11.6 PLANNED | Verify the full browser/API/Redis/worker/database path with isolated documents. | Upload a handbook, wait for Ready, ask about leave, and reopen the answer. Check failure and organization-isolation cases too. |
 
@@ -384,6 +385,7 @@ Useful existing evidence:
 - [Live backend conversation verification](backend/docs/conversation-step-5-live-verification.md)
 - [11.1 Redis connection](backend/docs/redis-step-1-connection.md)
 - [11.2 BullMQ queue](backend/docs/redis-step-2-document-queue.md)
+- [11.3 Document worker](backend/docs/redis-step-3-document-worker.md)
 
 Before advancing a step, check:
 
@@ -394,5 +396,5 @@ Before advancing a step, check:
 - [ ] Any remaining limitation is visible here.
 - [ ] The tracker has been updated and I know the next step.
 
-**Next lesson: 11.3 — what a worker does, how it receives a job, and how it safely
-calls our existing document-processing code.**
+**Next lesson: 11.4 — what happens when processing fails or a worker stops halfway
+through a document, and how we safely recover.**

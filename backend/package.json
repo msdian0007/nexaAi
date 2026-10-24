@@ -9,6 +9,8 @@
     "start": "node dist/src/app.js",
     "check:redis": "npm run build && node scripts/check-redis.cjs",
     "test:document-queue": "npm run build && node --test tests/document.queue.integration.test.cjs",
+    "worker:documents": "node dist/src/jobs/document.worker.main.js",
+    "test:document-worker": "npm run build && node --test tests/document.worker.integration.test.cjs",
     "test:document-pipeline": "npm run build && node --test tests/document.pipeline.e2e.test.cjs"
   },
   "keywords": [],
