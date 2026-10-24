@@ -2,31 +2,59 @@ import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { useAuth } from "../auth/auth.context";
 import { ApiError } from "../../services/api";
-import { DOCUMENT_ACCEPT, parseDocument, validateFile } from "./document.types";
+import { DOCUMENT_ACCEPT, parseDocument, processingState, validateFile } from "./document.types";
 import type { DocumentStatus } from "./document.types";
 
 const labels = {
-  UPLOADED: "Waiting for processing",
+  QUEUED: "Waiting for processing",
   PROCESSING: "Processing",
-  COMPLETED: "Ready for questions",
+  READY: "Ready for questions",
   FAILED: "Processing failed",
+  RETRYING: "Retrying automatically",
+  NOT_QUEUED: "Saved — processing not queued",
+  UNAVAILABLE: "Processing status temporarily unavailable",
 };
 
 export function DocumentsPage() {
   const { request, session } = useAuth();
   const [file, setFile] = useState<File | null>(null);
   const [document, setDocument] = useState<DocumentStatus | null>(null);
-  const [pending, setPending] = useState<"upload" | "status" | null>(null);
+  const [pending, setPending] = useState<"upload" | "status" | "retry" | null>(null);
   const [error, setError] = useState("");
   const active = useRef<AbortController | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const errorElement = useRef<HTMLParagraphElement>(null);
+  const headingElement = useRef<HTMLHeadingElement>(null);
+  useEffect(() => { headingElement.current?.focus(); }, []);
   useEffect(() => () => active.current?.abort(), []);
   useEffect(() => {
     if (error) errorElement.current?.focus();
   }, [error]);
 
-  async function run(kind: "upload" | "status") {
+  useEffect(() => {
+    if (!document || pending || error || ['READY', 'FAILED', 'NOT_QUEUED'].includes(processingState(document))) return;
+    const controller = new AbortController();
+    // Schedule the next check after the previous response. No overlapping polls;
+    // navigation, a new upload, or a manual action cancels this request and timer.
+    const timer = setTimeout(async () => {
+      try {
+        const result = await request(`/documents/${document.id}/status`, { signal: controller.signal });
+        const next = parseDocument(result);
+        if (!controller.signal.aborted) setDocument(next);
+      } catch (failure) {
+        if (controller.signal.aborted) return;
+        if (failure instanceof ApiError && failure.status === 404) {
+          setDocument(null);
+          setError("This document is no longer available in your organization.");
+        } else {
+          setError("Automatic status checks paused. Refresh status to try again; the document may still be processing.");
+        }
+      }
+    }, processingState(document) === 'UNAVAILABLE' ? 5000 : 2000);
+    return () => { clearTimeout(timer); controller.abort(); };
+  }, [document, pending, error, request]);
+
+  async function run(kind: "upload" | "status" | "retry") {
     if (active.current) return;
     if (kind === "upload") {
       const invalid = file ? validateFile(file) : "Choose a document first.";
@@ -35,7 +63,7 @@ export function DocumentsPage() {
         return;
       }
     }
-    if (kind === "status" && !document) return;
+    if (kind !== "upload" && !document) return;
     const controller = new AbortController();
     active.current = controller;
     setPending(kind);
@@ -63,7 +91,8 @@ export function DocumentsPage() {
           signal: controller.signal,
         });
       } else if (document) {
-        result = await request(`/documents/${document.id}/status`, {
+        result = await request(`/documents/${document.id}/${kind === "retry" ? "reprocess" : "status"}`, {
+          method: kind === "retry" ? "POST" : "GET",
           signal: controller.signal,
         });
       }
@@ -80,8 +109,18 @@ export function DocumentsPage() {
         (failure instanceof DOMException && failure.name === "AbortError")
       )
         return;
+      if (failure instanceof ApiError && failure.code === "DOCUMENT_QUEUE_UNAVAILABLE" && failure.data) {
+        try {
+          const saved = parseDocument(failure.data);
+          setDocument(saved);
+          setFile(null);
+          if (fileInput.current) fileInput.current.value = "";
+          setError("Your file is saved, but processing could not be confirmed. Refresh status; you can retry this saved document when the service is available.");
+          return;
+        } catch { /* Ignore malformed error data and show the generic message below. */ }
+      }
       if (
-        kind === "status" &&
+        kind !== "upload" &&
         failure instanceof ApiError &&
         failure.status === 404
       ) {
@@ -91,6 +130,8 @@ export function DocumentsPage() {
         setError(
           "We could not confirm that this upload completed. The server may have saved it. Do not repeatedly upload the same file; check its status before trying again.",
         );
+      } else if (kind === "retry") {
+        setError("Could not confirm the retry. Refresh status before trying again; processing may already be queued.");
       } else {
         setError(
           "Could not refresh the document status. The information below is from the last successful response.",
@@ -113,7 +154,7 @@ export function DocumentsPage() {
       <h1
         id="documents-heading"
         tabIndex={-1}
-        ref={(element) => element?.focus()}
+        ref={headingElement}
       >
         Documents
       </h1>
@@ -155,13 +196,12 @@ export function DocumentsPage() {
           disabled={!!pending || !file || !!(file && validateFile(file))}
         >
           {pending === "upload"
-            ? "Uploading and processing..."
+            ? "Uploading..."
             : "Upload document"}
         </button>
         {pending === "upload" && (
           <p role="status">
-            Extracting text and preparing your document for questions. Please
-            keep this page open.
+            Sending your file. Processing will continue in the background after it is accepted.
           </p>
         )}
       </form>
@@ -175,14 +215,19 @@ export function DocumentsPage() {
           <h2 id="latest-upload">Latest upload</h2>
           <p className="document-name">{document.originalName}</p>
           <p role="status">
-            <strong>{labels[document.status]}</strong>
+            <strong>{labels[processingState(document)]}</strong>
           </p>
-          {document.status === "FAILED" && (
+          {processingState(document) === "FAILED" && (
             <p>
               The document could not be processed. It is not ready for
               questions.
             </p>
           )}
+          {['QUEUED', 'PROCESSING', 'RETRYING'].includes(processingState(document)) && (
+            <p>We check progress automatically. Processing continues if you leave this page.</p>
+          )}
+          {processingState(document) === 'RETRYING' && <p>A temporary problem occurred. Another attempt is scheduled; you do not need to upload again.</p>}
+          {processingState(document) === 'NOT_QUEUED' && <p>Your file is saved. Start processing below without uploading it again.</p>}
           <p>
             Document ID: <span className="document-name">{document.id}</span>
           </p>
@@ -194,6 +239,11 @@ export function DocumentsPage() {
           >
             {pending === "status" ? "Refreshing..." : "Refresh status"}
           </button>
+          {document.canRetry && (
+            <button className="secondary-button" disabled={!!pending} onClick={() => void run("retry")}>
+              {pending === "retry" ? "Submitting..." : processingState(document) === 'NOT_QUEUED' ? "Start processing" : "Retry processing"}
+            </button>
+          )}
         </section>
       )}
       <p className="session-note">

@@ -1,151 +1,99 @@
 import { Response } from "express";
-import { createDocument, getDocumentStatus } from "./document.service";
+import { createDocument, documentView, getDocumentStatus } from "./document.service";
 import { AuthenticatedRequest } from "../auth/auth.middleware";
 import path from "path";
-import { processDocument } from "./document.processing";
-import { DocumentNotFoundError, DocumentProcessingConflictError } from "./document.errors";
+import { getDocumentQueue, QueueProvider } from "./document.queue.runtime";
+import { DocumentJobRetryError } from "./document.queue";
 
-export const reprocessDocument = async (
-  req: AuthenticatedRequest,
-  res: Response,
-) => {
+// Test applications can provide an isolated queue; production uses the shared producer.
+const queueFor = (req: AuthenticatedRequest): QueueProvider =>
+  req.app.locals.getDocumentQueue ?? getDocumentQueue;
+
+function identity(req: AuthenticatedRequest, res: Response) {
+  const organizationId = req.user?.organizationId;
+  if (typeof organizationId !== "string" || !organizationId.trim()) {
+    res.status(401).json({ success: false, message: "Organization context is missing" });
+    return null;
+  }
+  const documentId = req.params.documentId;
+  if (typeof documentId !== "string" || !documentId.trim()) {
+    res.status(400).json({ success: false, message: "Document ID is required" });
+    return null;
+  }
+  return { documentId, organizationId };
+}
+
+export const reprocessDocument = async (req: AuthenticatedRequest, res: Response) => {
+  const ids = identity(req, res);
+  if (!ids) return;
   try {
-    const organizationId = req.user?.organizationId;
-
-    if (typeof organizationId !== "string" || !organizationId.trim()) {
-      return res.status(401).json({
-        success: false,
-        message: "Organization context is missing",
-      });
+    // Scope the database read before touching Redis. A caller cannot retry another tenant's job.
+    const document = await getDocumentStatus(ids.documentId, ids.organizationId, queueFor(req));
+    if (!document) return res.status(404).json({ success: false, message: "Document not found" });
+    if (document.processingState === "UNAVAILABLE") {
+      return res.status(503).json({ success: false, code: "DOCUMENT_QUEUE_UNAVAILABLE", data: document });
     }
-
-    const { documentId } = req.params;
-
-    if (typeof documentId !== "string" || !documentId.trim()) {
-      return res.status(400).json({
-        success: false,
-        message: "Document ID is required",
-      });
+    if (!document.canRetry) {
+      return res.status(409).json({ success: false, message: "Document is already queued, processing, or ready" });
     }
-
-    const result = await processDocument(documentId, organizationId, { retryFailedOnly: true });
-
-    return res.status(200).json({
-      success: true,
-      message: "Document reprocessed successfully",
-      data: result,
+    const queue = await queueFor(req)();
+    if (document.processingState === "FAILED") await queue.retryFailed(ids);
+    else await queue.enqueue(ids); // Also recovers a saved file whose original submission failed.
+    return res.status(202).json({
+      success: true, message: "Document accepted for background processing",
+      data: documentView(document, "QUEUED"),
     });
   } catch (error) {
-    if (error instanceof DocumentNotFoundError) {
-      return res.status(404).json({ success: false, message: error.message });
+    if (error instanceof DocumentJobRetryError) {
+      return res.status(409).json({ success: false, message: "Job state changed. Refresh document status." });
     }
-
-    if (error instanceof DocumentProcessingConflictError) {
-      return res.status(409).json({ success: false, message: error.message });
-    }
-
-    console.error("Reprocess document error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Document reprocessing failed",
-    });
+    console.error("Document retry submission failed.");
+    return res.status(503).json({ success: false, code: "DOCUMENT_QUEUE_UNAVAILABLE", message: "Could not confirm processing submission. Refresh document status." });
   }
 };
 
-export const documentStatus = async (
-  req: AuthenticatedRequest,
-  res: Response,
-) => {
+export const documentStatus = async (req: AuthenticatedRequest, res: Response) => {
+  const ids = identity(req, res);
+  if (!ids) return;
   try {
-    const organizationId = req.user?.organizationId;
-
-    if (typeof organizationId !== "string" || !organizationId.trim()) {
-      return res.status(401).json({
-        success: false,
-        message: "Organization context is missing",
-      });
-    }
-
-    const { documentId } = req.params;
-
-    if (typeof documentId !== "string" || !documentId.trim()) {
-      return res.status(400).json({
-        success: false,
-        message: "Document ID is required",
-      });
-    }
-
-    const document = await getDocumentStatus(documentId, organizationId);
-
-    if (!document) {
-      return res.status(404).json({
-        success: false,
-        message: "Document not found",
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      data: document,
-    });
-  } catch (error) {
-    console.error("Get document status error:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Failed to fetch document status",
-    });
+    const document = await getDocumentStatus(ids.documentId, ids.organizationId, queueFor(req));
+    if (!document) return res.status(404).json({ success: false, message: "Document not found" });
+    return res.status(200).json({ success: true, data: document });
+  } catch {
+    console.error("Get document status failed.");
+    return res.status(500).json({ success: false, message: "Failed to fetch document status" });
   }
 };
 
-export const uploadDocument = async (
-  req: AuthenticatedRequest,
-  res: Response
-) => {
+export const uploadDocument = async (req: AuthenticatedRequest, res: Response) => {
+  if (!req.user?.organizationId) return res.status(401).json({ success: false, message: "Unauthorized" });
+  if (!req.file) return res.status(400).json({ success: false, message: "Document file is required" });
   try {
-    if (!req.user) {
-      return res.status(401).json({
-        message: "Unauthorized",
-      });
-    }
-
-    if (!req.file) {
-      return res.status(400).json({
-        message: "Document file is required",
-      });
-    }
-
     const document = await createDocument({
-      organizationId: req.user.organizationId,
-      uploadedById: req.user.userId,
-
-      name: req.file.filename,
-      originalName: req.file.originalname,
-      mimeType: req.file.mimetype,
-      size: req.file.size,
+      organizationId: req.user.organizationId, uploadedById: req.user.userId,
+      name: req.file.filename, originalName: req.file.originalname,
+      mimeType: req.file.mimetype, size: req.file.size,
       storagePath: path.relative(process.cwd(), req.file.path),
     });
-
-    await processDocument(document.id, req.user.organizationId);
-
-    const completedDocument = await getDocumentStatus(document.id, req.user.organizationId);
-
-    if (!completedDocument) {
-      throw new DocumentNotFoundError();
+    try {
+      const queue = await queueFor(req)();
+      await queue.enqueue({ documentId: document.id, organizationId: req.user.organizationId });
+    } catch {
+      // A lost acknowledgement does not prove Redis rejected the job. Keep the
+      // file/record and return its ID; do not overwrite a worker's status or reupload.
+      return res.status(503).json({
+        success: false, code: "DOCUMENT_QUEUE_UNAVAILABLE",
+        message: "File saved, but processing submission could not be confirmed. Check its status.",
+        data: documentView(document, "UNAVAILABLE"),
+      });
     }
-
-    return res.status(201).json({
-      success: true,
-      message: "Document uploaded successfully",
-      data: completedDocument,
-      // Retained for existing API consumers.
-      document: completedDocument,
+    const accepted = documentView(document, "QUEUED");
+    return res.status(202).json({
+      success: true, message: "Document accepted for background processing",
+      data: accepted, document: accepted,
     });
-  } catch (error) {
-    console.error("Upload document error:", error);
-
-    return res.status(500).json({
-      message: "Failed to upload document",
-    });
+  } catch {
+    console.error("Upload document failed.");
+    return res.status(500).json({ success: false, message: "Failed to upload document" });
   }
 };

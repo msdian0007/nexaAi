@@ -4,6 +4,8 @@ export interface DocumentStatus {
   status: 'UPLOADED' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
   updatedAt: string;
   errorMessage: string | null;
+  processingState?: 'QUEUED' | 'PROCESSING' | 'RETRYING' | 'READY' | 'FAILED' | 'NOT_QUEUED' | 'UNAVAILABLE';
+  canRetry?: boolean;
 }
 
 export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
@@ -26,5 +28,12 @@ export function parseDocument(value: unknown): DocumentStatus {
       typeof doc.updatedAt !== 'string' || !Number.isFinite(Date.parse(doc.updatedAt))) {
     throw new Error('Invalid document response');
   }
+  if ((doc.processingState !== undefined && !['QUEUED', 'PROCESSING', 'RETRYING', 'READY', 'FAILED', 'NOT_QUEUED', 'UNAVAILABLE'].includes(doc.processingState)) ||
+      (doc.canRetry !== undefined && typeof doc.canRetry !== 'boolean')) throw new Error('Invalid processing status');
   return doc;
+}
+
+export function processingState(doc: DocumentStatus) {
+  // Preserve compatibility with older status responses while deployments roll out.
+  return doc.processingState ?? ({ UPLOADED: 'QUEUED', PROCESSING: 'PROCESSING', COMPLETED: 'READY', FAILED: 'FAILED' } as const)[doc.status];
 }

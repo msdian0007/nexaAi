@@ -2,6 +2,9 @@
 
 Verified locally on **2026-10-24**. Next: **11.5, connecting uploads and status UI**.
 
+Historical note: the connection described as future work below is now implemented
+in [Step 11.5](redis-step-5-background-uploads.md). This guide records the 11.4 checkpoint.
+
 ## The problem, using a handbook
 
 Suppose you upload a handbook containing "Employees receive 18 annual leave days."

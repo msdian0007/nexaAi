@@ -1,5 +1,9 @@
 # Frontend integration — Step 4: Document upload
 
+Historical note: this guide describes the earlier synchronous upload screen. See
+[Phase 11.5](../../backend/docs/redis-step-5-background-uploads.md) for the current
+queued upload, automatic status checks, and latest-document retry behavior.
+
 ## What this step delivers
 
 The protected /documents page accepts one PDF, DOCX or TXT file, up to 10 MiB (10 × 1024 × 1024 bytes). It shows uploading/processing state, the returned document status and a manual Refresh status button. Access it from the Documents navigation link after login.

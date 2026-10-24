@@ -70,6 +70,15 @@ export async function createDocumentQueue(options: { url?: string; queueName?: s
   const readyQueue = queue;
   let closed = false;
   return {
+    isReady: () => !closed && connection.status === 'ready',
+    async getState(value: unknown): Promise<string> {
+      const data = parseDocumentJobData(value);
+      if (closed || connection.status !== 'ready') throw new DocumentQueueUnavailableError();
+      try {
+        // Read only a state, never return Redis failure stacks or document contents.
+        return await withDeadline(readyQueue.getJobState(`document-${data.organizationId}-${data.documentId}`));
+      } catch { throw new DocumentQueueUnavailableError(); }
+    },
     async enqueue(value: unknown): Promise<{ jobId: string }> {
       const data = parseDocumentJobData(value);
       if (closed || connection.status !== 'ready') throw new DocumentQueueUnavailableError();

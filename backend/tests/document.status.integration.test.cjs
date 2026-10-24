@@ -22,6 +22,8 @@ let server;
 let baseUrl;
 let document;
 let token;
+let queueState = 'unknown';
+let queueUnavailable = false;
 const ownerId = randomUUID();
 const originalSecret = process.env.JWT_SECRET;
 
@@ -41,6 +43,10 @@ before(async () => {
   });
   token = jwt.sign({ userId: ownerId, organizationId: ownerId, role: "MEMBER" }, process.env.JWT_SECRET, { expiresIn: "5m" });
   const app = express();
+  app.locals.getDocumentQueue = async () => ({ getState: async () => {
+    if (queueUnavailable) throw new Error('Private connection details');
+    return queueState;
+  } });
   app.use("/api/v1/documents", router);
   server = app.listen(0, "127.0.0.1");
   await once(server, "listening");
@@ -76,6 +82,7 @@ async function getStatus(id, authorization = token, query = "") {
 
 test("returns all processing states for a member of the document's organization", async () => {
   for (const status of ["UPLOADED", "PROCESSING", "COMPLETED", "FAILED"]) {
+    queueState = { UPLOADED: 'waiting', PROCESSING: 'active', COMPLETED: 'completed', FAILED: 'failed' }[status];
     const updated = await prisma.document.update({
       where: { id: document.id },
       data: { status, errorMessage: status === "FAILED" ? "Internal database exception at private/path" : null },
@@ -88,6 +95,8 @@ test("returns all processing states for a member of the document's organization"
         id: document.id,
         originalName: "Employee handbook.txt",
         status,
+        processingState: { UPLOADED: 'QUEUED', PROCESSING: 'PROCESSING', COMPLETED: 'READY', FAILED: 'FAILED' }[status],
+        canRetry: status === 'FAILED',
         updatedAt: updated.updatedAt.toISOString(),
         errorMessage: status === "FAILED" ? "Document processing failed." : null,
       },
@@ -97,6 +106,21 @@ test("returns all processing states for a member of the document's organization"
     assert.equal(afterRead.updatedAt.toISOString(), updated.updatedAt.toISOString());
     assert.equal(afterRead.status, status);
   }
+});
+
+test('scheduled retries override FAILED and queue outages never falsely report a final failure', async () => {
+  await prisma.document.update({ where: { id: document.id }, data: { status: 'FAILED' } });
+  queueState = 'delayed';
+  const retrying = (await getStatus(document.id)).body.data;
+  assert.equal(retrying.processingState, 'RETRYING');
+  assert.equal(retrying.canRetry, false);
+  assert.equal(retrying.errorMessage, null);
+  queueUnavailable = true;
+  try {
+    assert.equal((await getStatus(document.id)).body.data.processingState, 'UNAVAILABLE');
+    await prisma.document.update({ where: { id: document.id }, data: { status: 'COMPLETED' } });
+    assert.equal((await getStatus(document.id)).body.data.processingState, 'READY');
+  } finally { queueUnavailable = false; }
 });
 
 test("another tenant sees the same 404 as a missing document, even with an organization query override", async () => {

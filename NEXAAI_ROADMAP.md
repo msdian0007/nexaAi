@@ -5,11 +5,12 @@ Last updated: **2026-10-24**.
 ## START HERE: where we are
 
 **Current phase: 11 — Redis and background document processing.**
-**Last completed step: 11.4 — Failure recovery and retries.**
-**Next implementation step: 11.5 — Connect uploads and status UI.**
+**Last completed step: 11.5 — Connect uploads and status UI.**
+**Next implementation step: 11.6 — Full user-journey verification.**
 
-The worker now retries failures and recovers interrupted jobs safely in isolated tests.
-Connecting this queue behavior to real uploads and the status UI is next.
+Uploads now queue work and return acceptance before processing finishes. The browser
+checks progress automatically and can retry its latest saved document. Full live
+browser-to-answer verification is next.
 
 | Phase 11 step | Status | What that means |
 | --- | --- | --- |
@@ -17,11 +18,12 @@ Connecting this queue behavior to real uploads and the status UI is next.
 | 11.2 BullMQ producer | DONE | Code can store a processing instruction in Redis; tested with isolated jobs. |
 | 11.3 Worker | DONE | Worker validates jobs and prepares documents; real Redis/database/embedding tests pass. |
 | 11.4 Failure recovery and retries | DONE | Bounded retries, crash recovery, explicit retry, atomic results and job retention verified. |
-| 11.5 Connect uploads and status UI | NEXT | Real uploads use the queue and show processing progress. |
-| 11.6 Full verification | PLANNED | Prove upload, background processing, and document questions work together. |
+| 11.5 Connect uploads and status UI | DONE | Upload/retry APIs queue work; the screen polls status and handles saved-file submission failures. |
+| 11.6 Full verification | NEXT | Prove upload, background processing, and document questions work together. |
 
-**Current limitation:** real uploads still wait for processing to finish. The new queue
-has been tested separately; it is not connected to the upload endpoint yet.
+**Current limitation:** backend integration and mocked browser flows pass separately;
+the complete live browser/API/worker/Gemini journey still needs Step 11.6. The screen
+shows only the latest upload while mounted; a full document library remains future work.
 
 ## 1. What are we building?
 
@@ -75,7 +77,7 @@ work. A **producer** submits jobs. A **worker** performs them in a separate Node
 
 Suppose a large file takes 30 seconds to process. This is an illustration, not a measured time.
 
-**Current upload flow, already working:**
+**Previous upload flow, before Step 11.5:**
 
 ```text
 Browser sends handbook.pdf
@@ -90,7 +92,7 @@ API extracts text, splits it, generates embeddings, and saves results
 API returns "completed"
 ```
 
-**Target upload flow, being built in Phase 11:**
+**Current upload flow, connected in Step 11.5:**
 
 ```mermaid
 flowchart TD
@@ -145,8 +147,9 @@ We tested five submissions for the same document and organization. Redis stored 
 waiting job because all five used the same job ID. This protection lasts while that
 job is retained. It does not guarantee that processing can never run twice after a failure.
 
-**What exists today:** Redis + producer + worker + tested preparation and recovery.
-**What comes next:** connection to real uploads + status updates.
+**What exists today:** Redis + producer + worker + preparation/recovery + queued uploads
+and automatic status checks, with latest-upload retry controls.
+**What comes next:** full live journey verification through document questions and saved answers.
 
 ## 3. How we will work from now on
 
@@ -211,8 +214,8 @@ Future steps are a working plan; explain and record changes before implementing 
 | 2 Authentication and isolation | DONE for core flow | Register, password login, signed tokens, organization membership and scoped document/chat access. | Broader security review remains in Phase 14. |
 | 3 Authentication screens | DONE for core flow | Login/register, protected navigation, sign out, safe request handling. | Refresh currently requires login again; production session design is Phase 14. |
 | 4 Organization management | PARTIAL | Member list/add/change-role/remove APIs exist. | Profile APIs/UI, management screens, invitations, organization switching, role-policy review. |
-| 5 Document management | PARTIAL | PDF/DOCX/TXT upload, local file storage, processing status, upload UI. | Full document list, deletion, retry UI; cloud storage is Phase 18. |
-| 6 Document processing | DONE for synchronous flow | Extract text and split it into chunks. | Moving this work to a worker is Phase 11. |
+| 5 Document management | PARTIAL | PDF/DOCX/TXT upload, local storage, background processing status, latest-upload retry UI. | Full document list, deletion and library retry controls; cloud storage is Phase 18. |
+| 6 Document processing | DONE for core flow | Extract text and split it into chunks; now invoked by the Phase 11 worker. | Full live journey verification remains in 11.6. |
 | 7 Embeddings and search | DONE for core flow | Local embeddings, stored vectors, organization-scoped similarity search. | More retrieval evaluation remains in Phase 16. |
 | 8 RAG answers | DONE for core flow | Retrieved evidence, Gemini answers, validated citations, missing/conflicting evidence handling. | More answer-quality cases remain in Phase 16. |
 | 9 Chat interface | PARTIAL | Ask questions, answers/sources, loading/errors, new conversation. | Conversation deletion and safe Markdown rendering. |
@@ -229,7 +232,7 @@ Future steps are a working plan; explain and record changes before implementing 
 | 4.5 | Add organization switching. | A member of two organizations switches context and sees only the selected organization's data. |
 | 5.1 | Add a paginated document library. | Earlier uploads remain visible with their latest status. |
 | 5.2 | Add document deletion coordinated with active jobs, files, and chunks. | A deleted document cannot be retrieved for new answers; saved citation metadata is preserved. |
-| 5.3 | Add a controlled failed-document retry screen using Phase 11's recovery behavior. | Retrying does not create duplicate processing and status stays accurate. |
+| 5.3 | Extend Phase 11's latest-upload retry controls to the document library. | Older failed documents can be retried without duplicate processing, and status stays accurate. |
 | 9.1 | Add private conversation deletion. | Delete your own conversation; another user's conversation remains inaccessible. |
 | 9.2 | Render answer Markdown safely. | Lists/code display clearly and embedded unsafe HTML does not execute. |
 
@@ -245,9 +248,9 @@ flowchart LR
     A[11.1 Redis - DONE] --> B[11.2 Producer - DONE]
     B --> C[11.3 Worker - DONE]
     C --> D[11.4 Recovery - DONE]
-    D --> E[11.5 Upload and UI integration - NEXT]
-    E --> F[11.6 End-to-end validation]
-    style E fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
+    D --> E[11.5 Upload and UI integration - DONE]
+    E --> F[11.6 End-to-end validation - NEXT]
+    style F fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
 ```
 
 | Step | What we do and why | Example and validation |
@@ -256,8 +259,8 @@ flowchart LR
 | 11.2 DONE | Add BullMQ producer, small job payloads, and duplicate protection. We need to submit instructions reliably. | Five equivalent submissions create one waiting test job. [Evidence](backend/docs/redis-step-2-document-queue.md). |
 | 11.3 DONE | Added a worker entry point; validate job data and organization association; call existing processing code; close connections on shutdown. | Real worker tests produced two chunks with 384-dimensional vectors, rejected invalid jobs, and verified idle shutdown. [Evidence](backend/docs/redis-step-3-document-worker.md). |
 | 11.4 DONE | Three attempts with backoff; database locking and atomic results; stalled-job recovery and failure reconciliation; explicit failed-job retry; bounded terminal-job retention. | 19 tests passed, including two killed child workers, Redis redelivery, manual recovery and unchanged completed chunks. [Explanation and evidence](backend/docs/redis-step-4-document-recovery.md). |
-| 11.5 NEXT | Connect the upload API to the producer; return accepted/processing status; update the frontend to check status. Handle queue-submission failures and distinguish scheduled retries from final failures. | The upload request returns before extraction finishes; the screen changes to Ready or Failed later. Redis failure does not produce a false success. |
-| 11.6 PLANNED | Verify the full browser/API/Redis/worker/database path with isolated documents. | Upload a handbook, wait for Ready, ask about leave, and reopen the answer. Check failure and organization-isolation cases too. |
+| 11.5 DONE | Upload/retry APIs return 202 after queue acceptance; status combines database and Redis; UI polls and offers scoped retry; uncertain submissions retain saved IDs. | 29 backend, 9 browser and 10 utility tests passed. Queuing with no worker and recovery without re-upload were verified. [Explanation and walkthrough](backend/docs/redis-step-5-background-uploads.md). |
+| 11.6 NEXT | Verify the full browser/API/Redis/worker/database path with isolated documents. | Upload a handbook, wait for Ready, ask about leave, and reopen the answer. Check failure and organization-isolation cases too. |
 
 **Phase completion gate:** demonstrate 11.6 before marking Phase 11 DONE.
 
@@ -267,8 +270,9 @@ They must agree appropriately, but they are not the same record.
 
 Step 11.4 currently uses a three-minute processing transaction and one job per worker.
 A database outage can prevent the failure callback from updating document status;
-retrying after service restoration can recover it. Real upload/reprocess HTTP requests
-remain synchronous until 11.5. See the evidence guide for retention and recovery limits.
+retrying after service restoration can recover it. Upload/reprocess HTTP requests now
+queue work and return 202. Lost responses without a received document ID still need
+future library recovery. See the evidence guides for retention and recovery limits.
 
 ## 7. Future phases and steps
 
@@ -392,6 +396,7 @@ Useful existing evidence:
 - [11.2 BullMQ queue](backend/docs/redis-step-2-document-queue.md)
 - [11.3 Document worker](backend/docs/redis-step-3-document-worker.md)
 - [11.4 Recovery, retries, and crash verification](backend/docs/redis-step-4-document-recovery.md)
+- [11.5 Background uploads, status polling, and saved-file retry](backend/docs/redis-step-5-background-uploads.md)
 
 Before advancing a step, check:
 
@@ -402,5 +407,5 @@ Before advancing a step, check:
 - [ ] Any remaining limitation is visible here.
 - [ ] The tracker has been updated and I know the next step.
 
-**Next lesson: 11.5 — let an upload return after its work is queued, then have the
-screen check progress until the document is ready or finally fails.**
+**Next lesson: 11.6 — verify the full live journey: upload a handbook, watch background
+processing, ask a question, and reopen its saved answer.**

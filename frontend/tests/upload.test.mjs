@@ -3,6 +3,19 @@ import assert from 'node:assert/strict';
 import { createApiClient } from '../src/services/api.ts';
 import { validateFile, MAX_UPLOAD_BYTES } from '../src/features/documents/document.types.ts';
 
+test('a failed queue submission retains recovery data but never displays raw server errors', async () => {
+  const saved = { id: 'saved-document', originalName: 'policy.txt' };
+  const client = createApiClient('https://backend.example', async () => Response.json({
+    success: false, code: 'DOCUMENT_QUEUE_UNAVAILABLE', message: 'PRIVATE_PATH', data: saved,
+  }, { status: 503 }));
+  await assert.rejects(client('/documents/upload'), error => {
+    assert.equal(error.code, 'DOCUMENT_QUEUE_UNAVAILABLE');
+    assert.deepEqual(error.data, saved);
+    assert.equal(error.message.includes('PRIVATE_PATH'), false);
+    return true;
+  });
+});
+
 test('multipart preserves FormData and leaves Content-Type to the browser', async () => {
   const form = new FormData();
   form.append('document', new File(['Policy text'], 'policy.txt', { type: 'text/plain' }));

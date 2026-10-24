@@ -6,6 +6,7 @@ import protectedRoutes from './auth/auth.protected.route';
 import organizationRoutes from "./organization/organization.routes";
 import documentRoutes from "./document/document.routes";
 import ragRoutes from "./rag/rag.routes";
+import { getDocumentQueue, closeDocumentQueue } from './document/document.queue.runtime';
 
 // const prisma = new PrismaClient();
 const app = express();
@@ -37,9 +38,24 @@ app.get("/api/v1/health", async (_req, res) => {
   }
 });
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`NexaAI backend running on port ${PORT}`);
 });
+
+// Warm one producer without preventing login/chat when Redis is unavailable.
+// Later document requests can reconnect; extraction runs only in the worker process.
+void getDocumentQueue().catch(() => console.error('Document queue is unavailable.'));
+let stopping = false;
+function shutdown() {
+  if (stopping) return;
+  stopping = true;
+  server.close(() => {
+    void closeDocumentQueue().finally(() => prisma.$disconnect())
+      .catch(() => { process.exitCode = 1; });
+  });
+}
+process.once('SIGINT', shutdown);
+process.once('SIGTERM', shutdown);
 
 
 

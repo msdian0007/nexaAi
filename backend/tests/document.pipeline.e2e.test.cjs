@@ -10,6 +10,11 @@ const express = require("express");
 const jwt = require("jsonwebtoken");
 const prisma = require("../dist/src/config/database").default;
 const router = require("../dist/src/document/document.routes").default;
+const { createDocumentQueue, DocumentQueueUnavailableError } = require('../dist/src/document/document.queue');
+const { createDocumentWorker } = require('../dist/src/document/document.worker');
+const { createRedisConnection } = require('../dist/src/config/redis');
+const { Queue } = require('bullmq');
+const { setTimeout: delay } = require('node:timers/promises');
 
 test("a real upload completes with extracted text, chunks, and 384-dimensional vectors", { timeout: 180000 }, async t => {
   const id = randomUUID();
@@ -19,6 +24,9 @@ test("a real upload completes with extracted text, chunks, and 384-dimensional v
   const originalSecret = process.env.JWT_SECRET;
   let created = false;
   let server;
+  let producer, worker, running, inspector;
+  const queueName = `nexaai-pipeline-test-${id}`;
+  const connection = createRedisConnection();
   try {
     process.env.JWT_SECRET = randomUUID();
     await prisma.user.create({
@@ -33,6 +41,11 @@ test("a real upload completes with extracted text, chunks, and 384-dimensional v
     created = true;
     const token = jwt.sign({ userId: id, organizationId: id, role: "MEMBER" }, process.env.JWT_SECRET, { expiresIn: "5m" });
     const app = express();
+    producer = await createDocumentQueue({ queueName });
+    await connection.connect();
+    inspector = new Queue(queueName, { connection });
+    inspector.on('error', () => {});
+    app.locals.getDocumentQueue = async () => producer;
     app.use(express.json());
     app.use("/api/v1/documents", router);
     server = app.listen(0, "127.0.0.1");
@@ -50,9 +63,58 @@ test("a real upload completes with extracted text, chunks, and 384-dimensional v
       signal: AbortSignal.timeout(150000),
     });
     const body = await response.json();
-    assert.equal(response.status, 201, JSON.stringify(body));
+    assert.equal(response.status, 202, JSON.stringify(body));
     assert.equal(body.success, true);
     assert.deepEqual(body.data, body.document);
+    assert.equal(body.data.processingState, 'QUEUED');
+    // The HTTP response arrives while NO worker is running: extraction cannot
+    // have occurred in the request. The accepted file has no chunks yet.
+    assert.equal(await prisma.documentChunk.count({ where: { documentId: body.data.id } }), 0);
+    assert.equal((await prisma.document.findUniqueOrThrow({ where: { id: body.data.id } })).status, 'UPLOADED');
+
+    // Simulate an unavailable producer, retaining the saved record in the 503 response.
+    app.locals.getDocumentQueue = async () => { throw new DocumentQueueUnavailableError(); };
+    const uncertain = await fetch(`${baseUrl}/upload`, {
+      method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: form,
+    });
+    const saved = await uncertain.json();
+    assert.equal(uncertain.status, 503);
+    assert.equal(saved.success, false);
+    assert.equal(saved.data.processingState, 'UNAVAILABLE');
+    assert.ok(saved.data.id);
+    assert.equal(saved.data.storagePath, undefined);
+    app.locals.getDocumentQueue = async () => producer;
+    const beforeRetry = await fetch(`${baseUrl}/${saved.data.id}/status`, { headers: { Authorization: `Bearer ${token}` } });
+    assert.equal((await beforeRetry.json()).data.processingState, 'NOT_QUEUED');
+    const retried = await fetch(`${baseUrl}/${saved.data.id}/reprocess`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+    assert.equal(retried.status, 202);
+    assert.equal((await retried.json()).data.id, saved.data.id);
+    assert.equal(await prisma.document.count({ where: { organizationId: id } }), 2, 'Retry must not create another document');
+    // Losing the enqueue acknowledgement is ambiguous: Redis may already have
+    // the job. Never mark that saved document FAILED or create a second job.
+    app.locals.getDocumentQueue = async () => ({ ...producer, enqueue: async data => {
+      await producer.enqueue(data);
+      throw new DocumentQueueUnavailableError();
+    } });
+    const ambiguous = await fetch(`${baseUrl}/upload`, {
+      method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: form,
+    });
+    assert.equal(ambiguous.status, 503);
+    const ambiguousDocument = (await ambiguous.json()).data;
+    app.locals.getDocumentQueue = async () => producer;
+    const confirmed = await fetch(`${baseUrl}/${ambiguousDocument.id}/status`, { headers: { Authorization: `Bearer ${token}` } });
+    assert.equal((await confirmed.json()).data.processingState, 'QUEUED');
+    const duplicate = await fetch(`${baseUrl}/${ambiguousDocument.id}/reprocess`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+    assert.equal(duplicate.status, 409);
+    assert.equal(await inspector.getWaitingCount(), 3);
+    worker = createDocumentWorker({ queueName });
+    running = worker.run();
+    const deadline = Date.now() + 120000;
+    while (Date.now() < deadline) {
+      if (await prisma.document.count({ where: { organizationId: id, status: 'COMPLETED' } }) === 3) break;
+      await delay(100);
+    }
+    assert.equal(await prisma.document.count({ where: { organizationId: id, status: 'COMPLETED' } }), 3);
     const document = await prisma.document.findUniqueOrThrow({
       where: { id: body.document.id }, include: { chunks: { orderBy: { chunkIndex: "asc" } } },
     });
@@ -88,13 +150,21 @@ test("a real upload completes with extracted text, chunks, and 384-dimensional v
     assert.equal(statusResponse.status, 200);
     assert.equal((await statusResponse.json()).data.status, "COMPLETED");
     t.diagnostic(`Verified ${document.chunks.length} chunks, ${vectors.length} real vectors, 384 dimensions each.`);
-    // The upload response must agree with the final persisted state.
-    assert.equal(body.document.status, "COMPLETED");
-    assert.equal(body.document.updatedAt, document.updatedAt.toISOString());
+    // Acceptance and readiness are separate responses; the initial result is queued.
+    assert.equal(body.document.status, "UPLOADED");
     assert.equal(body.document.errorMessage, null);
   } finally {
     try {
       if (server) await new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
+      await worker?.close();
+      await running;
+      await producer?.close();
+      if (inspector) {
+        assert.equal(queueName, `nexaai-pipeline-test-${id}`);
+        await inspector.obliterate();
+        await inspector.close();
+      }
+      connection.disconnect();
       if (created) {
         await prisma.$transaction([
           prisma.document.deleteMany({ where: { organizationId: id } }),

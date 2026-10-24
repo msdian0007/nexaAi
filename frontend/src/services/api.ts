@@ -1,12 +1,14 @@
 export class ApiError extends Error {
   readonly status: number;
   readonly code?: string;
+  readonly data?: unknown;
 
-  constructor(message: string, status: number, code?: string) {
+  constructor(message: string, status: number, code?: string, data?: unknown) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.code = code;
+    this.data = data;
   }
 }
 
@@ -92,6 +94,9 @@ export function createApiClient(
           isRecord(payload) && typeof payload.code === "string"
             ? payload.code
             : undefined,
+          // Views must validate this before use. A failed queue submission can
+          // still include a safely scoped, saved document that the user can recover.
+          isRecord(payload) && payload.code === "DOCUMENT_QUEUE_UNAVAILABLE" ? payload.data : undefined,
         );
       }
       if (
