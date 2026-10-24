@@ -1,12 +1,16 @@
 import { Worker, UnrecoverableError } from 'bullmq';
 import { createWorkerRedisConnection } from '../config/redis';
 import { DOCUMENT_JOB_NAME, DOCUMENT_QUEUE_NAME, parseDocumentJobData } from './document.queue';
-import { processDocument } from './document.processing';
+import { processDocument, markInterruptedDocumentFailed } from './document.processing';
 import { DocumentNotFoundError, DocumentProcessingConflictError } from './document.errors';
 
 // Construction is explicit; importing this module never starts processing jobs.
 // A custom queue name is server/test configuration, never user-supplied request data.
-export function createDocumentWorker(options: { queueName?: string; url?: string } = {}) {
+export function createDocumentWorker(options: {
+  queueName?: string; url?: string;
+  // Server configuration; tests shorten these to exercise actual crash recovery.
+  lockDuration?: number; stalledInterval?: number;
+} = {}) {
   const queueName = options.queueName ?? DOCUMENT_QUEUE_NAME;
   if (!/^[a-zA-Z0-9_-]+$/.test(queueName)) throw new Error('Invalid document queue name.');
   const connection = createWorkerRedisConnection(options.url);
@@ -40,6 +44,9 @@ export function createDocumentWorker(options: { queueName?: string; url?: string
       autorun: false,
       // Local embeddings are resource-intensive. Start with one job at a time.
       concurrency: 1,
+      lockDuration: options.lockDuration ?? 30000,
+      stalledInterval: options.stalledInterval ?? 30000,
+      maxStalledCount: 1,
     });
   } catch (error) {
     connection.disconnect();
@@ -48,7 +55,19 @@ export function createDocumentWorker(options: { queueName?: string; url?: string
   worker.on('ready', () => console.log('Document worker connected to Redis.'));
   worker.on('active', () => console.log('Document worker started a job.'));
   worker.on('completed', () => console.log('Document worker completed a job.'));
-  worker.on('failed', () => console.error('Document worker job failed.'));
+  const reconciliations = new Set<Promise<void>>();
+  worker.on('failed', job => {
+    console.error('Document worker job failed.');
+    if (!job || job.name !== DOCUMENT_JOB_NAME) return;
+    let data;
+    try { data = parseDocumentJobData(job.data); } catch { return; }
+    // A stalled job may exhaust its crash budget before processDocument runs.
+    // The database lock prevents this callback from changing a live attempt.
+    const pending = markInterruptedDocumentFailed(data.documentId, data.organizationId)
+      .catch(() => { console.error('Document failure status reconciliation failed.'); });
+    reconciliations.add(pending);
+    void pending.finally(() => reconciliations.delete(pending));
+  });
   worker.on('error', () => console.error('Document worker connection or runtime error.'));
 
   let closing: Promise<void> | undefined;
@@ -56,10 +75,10 @@ export function createDocumentWorker(options: { queueName?: string; url?: string
     run: () => worker.run(),
     close: () => {
       // Stop accepting jobs, wait for the active job, then release Redis sockets.
-      // Repeated shutdown requests share the same promise. Forced/crash recovery
-      // is Step 11.4; a graceful close intentionally waits for active work.
+      // Repeated shutdown requests share the same promise. Redis redelivers
+      // crashed work after its lock expires; graceful close waits for active work.
       closing ??= (async () => {
-        try { await worker.close(); }
+        try { await worker.close(); await Promise.all(reconciliations); }
         finally { connection.disconnect(); }
       })();
       return closing;

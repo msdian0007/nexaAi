@@ -19,10 +19,10 @@ stubModule("../dist/src/document/document.extractor", {
   extractTextFromDocument: (...args) => extract(...args),
 });
 stubModule("../dist/src/document/document.embedding.service", {
-  embedDocumentChunks: async documentId => {
+  embedDocumentChunks: async (documentId, db = prisma) => {
     embeddingCalls++;
     const vector = `[${[1, ...Array(383).fill(0)].join(",")}]`;
-    await prisma.$executeRaw`
+    await db.$executeRaw`
       UPDATE "DocumentChunk"
       SET embedding = ${vector}::vector(384), "embeddingStatus" = 'COMPLETED'
       WHERE "documentId" = ${documentId}

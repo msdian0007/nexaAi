@@ -34,9 +34,11 @@ test('stores waiting jobs, deduplicates concurrent submissions, and survives pro
     assert.equal(stored.name, DOCUMENT_JOB_NAME);
     assert.deepEqual(stored.data, data);
     assert.equal(await stored.getState(), 'waiting');
-    assert.equal(stored.opts.attempts, 1);
-    assert.equal(stored.opts.removeOnComplete, false);
-    assert.equal(stored.opts.removeOnFail, false);
+    assert.equal(stored.opts.attempts, 3);
+    assert.deepEqual(stored.opts.backoff, { type: 'exponential', delay: 2000 });
+    assert.deepEqual(stored.opts.removeOnComplete, { age: 86400, count: 1000 });
+    assert.deepEqual(stored.opts.removeOnFail, { age: 604800, count: 1000 });
+    await assert.rejects(producer.retryFailed(data), /existing failed/);
 
     await producer.close();
     await producer.close(); // Shutdown is safe to call more than once.

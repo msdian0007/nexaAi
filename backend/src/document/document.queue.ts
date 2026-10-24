@@ -9,6 +9,10 @@ export class DocumentQueueUnavailableError extends Error {
   constructor() { super('Document processing queue is unavailable.'); }
 }
 
+export class DocumentJobRetryError extends Error {
+  constructor() { super('Only an existing failed document job can be retried.'); }
+}
+
 // Runtime validation is needed even with TypeScript: jobs can come from JavaScript
 // callers today and persisted Redis data later. Copy only the fields the worker needs.
 export function parseDocumentJobData(value: unknown): DocumentJobData {
@@ -46,11 +50,12 @@ export async function createDocumentQueue(options: { url?: string; queueName?: s
       connection,
       skipWaitingForReady: true,
       defaultJobOptions: {
-        // Retries require a worker with safe recovery semantics; add those together
-        // in the worker step. Keep terminal jobs so IDs remain deduplicated for now.
-        attempts: 1,
-        removeOnComplete: false,
-        removeOnFail: false,
+        // Three total attempts, waiting 2 then 4 seconds after ordinary failures.
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 2000 },
+        // Cleanup happens as jobs finish, not on a background expiry timer.
+        removeOnComplete: { age: 86400, count: 1000 },
+        removeOnFail: { age: 604800, count: 1000 },
       },
     });
     // BullMQ emits connection errors separately from rejected commands. Log only
@@ -75,6 +80,36 @@ export async function createDocumentQueue(options: { url?: string; queueName?: s
         await withDeadline(readyQueue.add(DOCUMENT_JOB_NAME, data, { jobId }));
         return { jobId };
       } catch { throw new DocumentQueueUnavailableError(); }
+    },
+    async retryFailed(value: unknown): Promise<{ jobId: string }> {
+      const data = parseDocumentJobData(value);
+      if (closed || connection.status !== 'ready') throw new DocumentQueueUnavailableError();
+      const jobId = `document-${data.organizationId}-${data.documentId}`;
+      try {
+        const job = await withDeadline(readyQueue.getJob(jobId));
+        if (!job || job.name !== DOCUMENT_JOB_NAME ||
+            job.data.documentId !== data.documentId || job.data.organizationId !== data.organizationId) {
+          throw new DocumentJobRetryError();
+        }
+        // BullMQ atomically requires FAILED. Reset the budget for deliberate retries.
+        // BullMQ 6 retry() resets attempt counts but keeps the stalled-job marker.
+        // Clear that marker ONLY while Redis still lists this job as failed;
+        // otherwise a manual retry after repeated crashes would fail immediately.
+        // retry() below still atomically decides which concurrent caller wins.
+        await withDeadline(connection.eval(`
+          if redis.call('ZSCORE', KEYS[1], ARGV[1]) then
+            redis.call('HDEL', KEYS[2], 'defa', 'stc')
+          end
+          return 1
+        `, 2, readyQueue.toKey('failed'), readyQueue.toKey(jobId), jobId));
+        await withDeadline(job.retry('failed', { resetAttemptsMade: true, resetAttemptsStarted: true }));
+        return { jobId };
+      } catch (error) {
+        if (error instanceof DocumentQueueUnavailableError || connection.status !== 'ready') {
+          throw new DocumentQueueUnavailableError();
+        }
+        throw new DocumentJobRetryError();
+      }
     },
     async close(): Promise<void> {
       if (closed) return;

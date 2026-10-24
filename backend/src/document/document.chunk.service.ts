@@ -1,9 +1,11 @@
 import prisma from "../config/database";
+import type { Prisma } from "../../generated/prisma/client";
 import { chunkText } from "./document.chunker";
 
 export const createDocumentChunks = async (
   documentId: string,
-  extractedText: string
+  extractedText: string,
+  db: Prisma.TransactionClient = prisma,
 ) => {
   const chunks = chunkText(extractedText);
 
@@ -11,13 +13,13 @@ export const createDocumentChunks = async (
     return [];
   }
 
-  await prisma.documentChunk.deleteMany({
+  await db.documentChunk.deleteMany({
     where: {
       documentId,
     },
   });
 
-  await prisma.documentChunk.createMany({
+  await db.documentChunk.createMany({
     data: chunks.map((chunk) => ({
       documentId,
       content: chunk.content,

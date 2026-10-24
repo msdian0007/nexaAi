@@ -2,6 +2,9 @@
 
 ## What problem does this solve?
 
+Historical note: this guide records Step 11.3. Retry and crash-recovery limitations
+listed below are addressed in [Step 11.4](redis-step-4-document-recovery.md).
+
 Step 11.2 created an instruction card: "Process document X for organization Y."
 Until a worker reads that card, it stays in Redis and no document work happens.
 This step adds the program that reads it and does the work.

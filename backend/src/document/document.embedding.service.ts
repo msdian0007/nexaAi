@@ -1,10 +1,12 @@
 import prisma from "../config/database";
+import type { Prisma } from "../../generated/prisma/client";
 import { generateEmbedding } from "./document.embedding";
 
 export const embedDocumentChunks = async (
-  documentId: string
+  documentId: string,
+  db: Prisma.TransactionClient = prisma,
 ) => {
-  const chunks = await prisma.$queryRaw<
+  const chunks = await db.$queryRaw<
     { id: string; content: string; chunkIndex: number }[]
   >`
     SELECT "id", "content", "chunkIndex"
@@ -29,7 +31,7 @@ export const embedDocumentChunks = async (
 
       const vector = `[${embedding.join(",")}]`;
 
-      await prisma.$executeRaw`
+      await db.$executeRaw`
         UPDATE "DocumentChunk"
         SET "embedding" = ${vector}::vector(384),
             "embeddingStatus" = 'COMPLETED'
@@ -48,7 +50,7 @@ export const embedDocumentChunks = async (
         error
       );
 
-      await prisma.documentChunk.update({
+      await db.documentChunk.update({
         where: {
           id: chunk.id,
         },

@@ -102,7 +102,17 @@ test('document worker processes isolated jobs with real infrastructure', { timeo
       const job = await terminal(result.jobId);
       assert.equal(await job.getState(), 'failed');
       assert.equal(job.failedReason, 'Document processing failed.');
+      assert.equal(job.attemptsMade, 3);
       assert.equal((await prisma.document.findUniqueOrThrow({ where: { id: broken.id } })).status, 'FAILED');
+
+      // Repair the fictional input and explicitly give the retained job a fresh budget.
+      await fs.writeFile(broken.storagePath, 'Employees receive 18 days of annual leave.');
+      await producer.retryFailed({ documentId: broken.id, organizationId: id });
+      const recovered = await terminal(result.jobId);
+      assert.equal(await recovered.getState(), 'completed', recovered.failedReason);
+      assert.equal(recovered.attemptsMade, 1);
+      assert.equal((await prisma.document.findUniqueOrThrow({ where: { id: broken.id } })).status, 'COMPLETED');
+      await assert.rejects(producer.retryFailed({ documentId: broken.id, organizationId: id }), /existing failed/);
     });
 
     await t.test('graceful shutdown closes the loop and leaves subsequent jobs waiting', async () => {
