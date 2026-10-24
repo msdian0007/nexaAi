@@ -4,13 +4,14 @@ Last updated: **2026-10-24**.
 
 ## START HERE: where we are
 
-**Current phase: 11 — Redis and background document processing.**
-**Last completed step: 11.5 — Connect uploads and status UI.**
-**Next implementation step: 11.6 — Full user-journey verification.**
+**Current phase: returning to Phase 4 — Organization management.**
+**Last completed step: 11.6 — Full live user-journey verification.**
+**Next implementation step: 4.1 — Review organization member permissions.**
 
-Uploads now queue work and return acceptance before processing finishes. The browser
-checks progress automatically and can retry its latest saved document. Full live
-browser-to-answer verification is next.
+**Phase 11 is DONE for the verified local workflow.** A real Chrome journey passed:
+queued upload, separate worker, automatic status updates, failed-file retry, a cited
+Gemini answer, and reopening the saved answer after a new login. Organization-isolation
+checks passed too. We now return to the earlier gaps in Phases 4, 5, and 9, as planned.
 
 | Phase 11 step | Status | What that means |
 | --- | --- | --- |
@@ -19,11 +20,11 @@ browser-to-answer verification is next.
 | 11.3 Worker | DONE | Worker validates jobs and prepares documents; real Redis/database/embedding tests pass. |
 | 11.4 Failure recovery and retries | DONE | Bounded retries, crash recovery, explicit retry, atomic results and job retention verified. |
 | 11.5 Connect uploads and status UI | DONE | Upload/retry APIs queue work; the screen polls status and handles saved-file submission failures. |
-| 11.6 Full verification | NEXT | Prove upload, background processing, and document questions work together. |
+| 11.6 Full verification | DONE | Real browser/services verified preparation, failure/retry, cited Gemini answer, saved history and isolation. |
 
-**Current limitation:** backend integration and mocked browser flows pass separately;
-the complete live browser/API/worker/Gemini journey still needs Step 11.6. The screen
-shows only the latest upload while mounted; a full document library remains future work.
+**Current limitation:** the successful live journey used a fictional TXT handbook and
+one generated answer; it is not a production load test or exhaustive format evaluation.
+The screen still shows only the latest upload while mounted; the full library is future work.
 
 ## 1. What are we building?
 
@@ -149,7 +150,8 @@ job is retained. It does not guarantee that processing can never run twice after
 
 **What exists today:** Redis + producer + worker + preparation/recovery + queued uploads
 and automatic status checks, with latest-upload retry controls.
-**What comes next:** full live journey verification through document questions and saved answers.
+**What comes next:** return to unfinished organization, document-library, and chat features,
+starting with the organization member-permission review in Step 4.1.
 
 ## 3. How we will work from now on
 
@@ -187,8 +189,8 @@ flowchart TD
     G --> H[8 Answers using Gemini and sources]
     H --> I[9 Chat screens - PARTIAL]
     I --> J[10 Saved conversation history]
-    J --> K[11 Background processing - YOU ARE HERE]
-    K --> L[Finish remaining Phase 4, 5, and 9 features]
+    J --> K[11 Background processing - DONE locally]
+    K --> L[Finish Phase 4, 5, and 9 gaps - NEXT 4.1]
     L --> M[12 AI agents]
     M --> N[13 Analytics dashboard]
     N --> O[14 Security and resource limits]
@@ -196,11 +198,11 @@ flowchart TD
     P --> Q[16 Full-system testing]
     Q --> R[17 Application containers and automated checks]
     R --> S[18 Deployment and production validation]
-    style K fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
+    style L fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
 ```
 
-Text route: **1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 (current)
--> finish earlier gaps -> 12 -> 13 -> 14 -> 15 -> 16 -> 17 -> 18.**
+Text route: **1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 (done locally)
+-> finish earlier gaps (current: 4.1) -> 12 -> 13 -> 14 -> 15 -> 16 -> 17 -> 18.**
 
 Some work was implemented in a different chronological order. We keep the original
 phase identities and explicitly return to unfinished features instead of hiding them.
@@ -215,17 +217,17 @@ Future steps are a working plan; explain and record changes before implementing 
 | 3 Authentication screens | DONE for core flow | Login/register, protected navigation, sign out, safe request handling. | Refresh currently requires login again; production session design is Phase 14. |
 | 4 Organization management | PARTIAL | Member list/add/change-role/remove APIs exist. | Profile APIs/UI, management screens, invitations, organization switching, role-policy review. |
 | 5 Document management | PARTIAL | PDF/DOCX/TXT upload, local storage, background processing status, latest-upload retry UI. | Full document list, deletion and library retry controls; cloud storage is Phase 18. |
-| 6 Document processing | DONE for core flow | Extract text and split it into chunks; now invoked by the Phase 11 worker. | Full live journey verification remains in 11.6. |
+| 6 Document processing | DONE for core flow | Extract text and split it into chunks; invoked by the worker and verified in the live 11.6 journey. | Broader document-format evaluation remains in Phase 16. |
 | 7 Embeddings and search | DONE for core flow | Local embeddings, stored vectors, organization-scoped similarity search. | More retrieval evaluation remains in Phase 16. |
 | 8 RAG answers | DONE for core flow | Retrieved evidence, Gemini answers, validated citations, missing/conflicting evidence handling. | More answer-quality cases remain in Phase 16. |
 | 9 Chat interface | PARTIAL | Ask questions, answers/sources, loading/errors, new conversation. | Conversation deletion and safe Markdown rendering. |
 | 10 Conversation history | DONE for core flow | Save exchanges, list/read history, pagination, reopen and continue, backend live verification. | Earlier messages are NOT yet passed to Gemini as conversation context. |
 
-### Return to these earlier phase steps after Phase 11
+### Return to these earlier phase steps now that Phase 11 is complete
 
 | Step | Planned work | How you validate it |
 | --- | --- | --- |
-| 4.1 | Review member APIs, allowed role changes, and current membership checks. | A regular member cannot perform an admin action; another organization cannot be modified. |
+| 4.1 NEXT | Review member APIs, allowed role changes, and current membership checks. | A regular member cannot perform an admin action; another organization cannot be modified. |
 | 4.2 | Add organization profile API and screen. | View/edit the intended organization's profile with appropriate permissions. |
 | 4.3 | Add member and role-management screens. | An authorized owner can add an existing user, adjust allowed roles, and remove membership. |
 | 4.4 | Add invitation creation and acceptance, with expiry. | A test invite works once and an expired invite is rejected; sending real invitations is a separate explicit action. |
@@ -249,8 +251,9 @@ flowchart LR
     B --> C[11.3 Worker - DONE]
     C --> D[11.4 Recovery - DONE]
     D --> E[11.5 Upload and UI integration - DONE]
-    E --> F[11.6 End-to-end validation - NEXT]
-    style F fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
+    E --> F[11.6 End-to-end validation - DONE]
+    F --> G[Return to 4.1 Permissions review - NEXT]
+    style G fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
 ```
 
 | Step | What we do and why | Example and validation |
@@ -260,11 +263,12 @@ flowchart LR
 | 11.3 DONE | Added a worker entry point; validate job data and organization association; call existing processing code; close connections on shutdown. | Real worker tests produced two chunks with 384-dimensional vectors, rejected invalid jobs, and verified idle shutdown. [Evidence](backend/docs/redis-step-3-document-worker.md). |
 | 11.4 DONE | Three attempts with backoff; database locking and atomic results; stalled-job recovery and failure reconciliation; explicit failed-job retry; bounded terminal-job retention. | 19 tests passed, including two killed child workers, Redis redelivery, manual recovery and unchanged completed chunks. [Explanation and evidence](backend/docs/redis-step-4-document-recovery.md). |
 | 11.5 DONE | Upload/retry APIs return 202 after queue acceptance; status combines database and Redis; UI polls and offers scoped retry; uncertain submissions retain saved IDs. | 29 backend, 9 browser and 10 utility tests passed. Queuing with no worker and recovery without re-upload were verified. [Explanation and walkthrough](backend/docs/redis-step-5-background-uploads.md). |
-| 11.6 NEXT | Verify the full browser/API/Redis/worker/database path with isolated documents. | Upload a handbook, wait for Ready, ask about leave, and reopen the answer. Check failure and organization-isolation cases too. |
+| 11.6 DONE | Verified real Chrome, actual frontend/API, isolated Redis queue, separate worker, PostgreSQL, local embeddings and one Gemini answer. | Handbook produced three vectors; answer said 18 days with its source; new login reopened identical saved text/sources. Failed-file retry and isolation passed. [Live evidence and explanation](backend/docs/redis-step-6-live-user-journey.md). |
 
-**Phase completion gate:** demonstrate 11.6 before marking Phase 11 DONE.
+**Phase completion gate: PASSED on 2026-10-24.** Phase 11 is DONE for the documented
+local core flow. Broader evaluation, production operation and earlier feature gaps remain.
 
-Two statuses will exist: **job status** in Redis describes the queue's work;
+Two statuses exist: **job status** in Redis describes the queue's work;
 **document status** in PostgreSQL describes whether a document is ready for questions.
 They must agree appropriately, but they are not the same record.
 
@@ -397,6 +401,7 @@ Useful existing evidence:
 - [11.3 Document worker](backend/docs/redis-step-3-document-worker.md)
 - [11.4 Recovery, retries, and crash verification](backend/docs/redis-step-4-document-recovery.md)
 - [11.5 Background uploads, status polling, and saved-file retry](backend/docs/redis-step-5-background-uploads.md)
+- [11.6 Complete live browser journey and Phase 11 completion](backend/docs/redis-step-6-live-user-journey.md)
 
 Before advancing a step, check:
 
@@ -407,5 +412,5 @@ Before advancing a step, check:
 - [ ] Any remaining limitation is visible here.
 - [ ] The tracker has been updated and I know the next step.
 
-**Next lesson: 11.6 — verify the full live journey: upload a handbook, watch background
-processing, ask a question, and reopen its saved answer.**
+**Next lesson: 4.1 — understand and verify who may manage organization members:
+owner, administrator, and regular member, including cross-organization restrictions.**

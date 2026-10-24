@@ -8,6 +8,11 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const express = require('express');
 const prisma = require('../dist/src/config/database').default;
+const { createDocumentQueue } = require('../dist/src/document/document.queue');
+const { createDocumentWorker } = require('../dist/src/document/document.worker');
+const { createRedisConnection } = require('../dist/src/config/redis');
+const { Queue } = require('bullmq');
+const { setTimeout: delay } = require('node:timers/promises');
 
 test('live upload and answers survive a new login and remain private', {
   skip: process.env.RUN_LIVE_CONVERSATION_TEST !== '1', timeout: 240000,
@@ -16,11 +21,21 @@ test('live upload and answers survive a new login and remain private', {
   const accounts = [];
   const originalSecret = process.env.JWT_SECRET;
   let server;
+  const queueName = `nexaai-live-history-${runId}`;
+  const connection = createRedisConnection();
+  let producer, inspector, worker, running;
   try {
     assert.ok(process.env.GEMINI_API_KEY?.trim(), 'GEMINI_API_KEY must be configured');
     // A temporary signing secret isolates test sessions without changing .env.
     process.env.JWT_SECRET = randomUUID();
     const app = express();
+    producer = await createDocumentQueue({ queueName });
+    await connection.connect();
+    inspector = new Queue(queueName, { connection });
+    inspector.on('error', () => {});
+    app.locals.getDocumentQueue = async () => producer;
+    worker = createDocumentWorker({ queueName });
+    running = worker.run();
     app.use(express.json());
     app.use('/api/v1/auth', require('../dist/src/auth/auth.routes').default);
     app.use('/api/v1/auth', require('../dist/src/auth/auth.protected.route').default);
@@ -70,9 +85,16 @@ test('live upload and answers survive a new login and remain private', {
       'Fictional NexaAI test leave policy. Employees receive 18 days of paid annual leave per year. ' +
       'Employees must submit annual leave requests to their manager at least 7 days before the planned absence.',
     ], { type: 'text/plain' }), 'fictional-history-policy.txt');
-    const document = await call('/documents/upload', { token: session.token, body: form, status: 201 });
-    assert.equal(document.status, 'COMPLETED');
-    const processed = await call(`/documents/${document.id}/status`, { token: session.token });
+    const document = await call('/documents/upload', { token: session.token, body: form, status: 202 });
+    assert.equal(document.processingState, 'QUEUED');
+    let processed;
+    const deadline = Date.now() + 120000;
+    do {
+      processed = await call(`/documents/${document.id}/status`, { token: session.token });
+      if (processed.processingState === 'READY') break;
+      assert.notEqual(processed.processingState, 'FAILED');
+      await delay(200);
+    } while (Date.now() < deadline);
     assert.equal(processed.status, 'COMPLETED');
     t.diagnostic('Fictional TXT upload, extraction and local embeddings completed.');
 
@@ -123,6 +145,15 @@ test('live upload and answers survive a new login and remain private', {
   } finally {
     try {
       if (server) await new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
+      await worker?.close();
+      await running;
+      await producer?.close();
+      if (inspector) {
+        assert.equal(queueName, `nexaai-live-history-${runId}`);
+        await inspector.obliterate();
+        await inspector.close();
+      }
+      connection.disconnect();
       for (const email of accounts) {
         const user = await prisma.user.findUnique({ where: { email }, include: { memberships: true } });
         if (!user) continue;

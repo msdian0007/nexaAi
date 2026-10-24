@@ -2,6 +2,9 @@
 
 Completed locally on **2026-10-24**. Next: **11.6, full user-journey verification**.
 
+Historical note: this guide records the Step 11.5 checkpoint. The live verification
+is now complete; see [Step 11.6](redis-step-6-live-user-journey.md) for its evidence and scope.
+
 ## What changed, and why?
 
 Previously, the upload request did all the work: save the handbook, read its text,
