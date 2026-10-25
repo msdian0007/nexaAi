@@ -39,6 +39,7 @@ export const searchDocumentChunks = async (
       JOIN "Document" d ON d."id" = c."documentId"
       WHERE d."organizationId" = ${organizationId}
         AND d."status" = 'COMPLETED'
+        AND d."deletionRequestedAt" IS NULL
         AND c."embeddingStatus" = 'COMPLETED'
         AND c."embedding" IS NOT NULL
         AND vector_norm(c."embedding") > 0

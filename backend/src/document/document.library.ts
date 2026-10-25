@@ -68,18 +68,18 @@ export async function listOrganizationDocuments(
 ) {
   // Check CURRENT membership and read metadata from one database snapshot.
   // The signed organization remains a filter even when a cursor is edited.
-  const rows = await prisma.$transaction(
+  const { rows, canDelete } = await prisma.$transaction(
     async (tx) => {
       const membership = await tx.organizationMember.findUnique({
         where: { userId_organizationId: { userId, organizationId } },
-        select: { id: true },
+        select: { id: true, role: true },
       });
       if (!membership)
         throw new DocumentLibraryError(
           403,
           "Current organization membership is required",
         );
-      return tx.document.findMany({
+      const rows = await tx.document.findMany({
         where: {
           organizationId,
           ...(cursor
@@ -103,8 +103,10 @@ export async function listOrganizationDocuments(
           status: true,
           createdAt: true,
           updatedAt: true,
+          deletionRequestedAt: true,
         },
       });
+      return { rows, canDelete: membership.role === "OWNER" || membership.role === "ADMIN" };
     },
     { isolationLevel: "RepeatableRead" },
   );
@@ -135,5 +137,5 @@ export async function listOrganizationDocuments(
           }),
         ).toString("base64url")
       : null;
-  return { organizationId, documents, page: { limit, hasMore, nextCursor } };
+  return { organizationId, canDelete, documents, page: { limit, hasMore, nextCursor } };
 }

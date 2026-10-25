@@ -104,6 +104,8 @@ model Document {
   storagePath    String
 
   extractedText  String?
+  // Durable deletion intent survives process/Redis/filesystem failures.
+  deletionRequestedAt DateTime?
 
   status         DocumentStatus @default(UPLOADED)
   errorMessage   String?

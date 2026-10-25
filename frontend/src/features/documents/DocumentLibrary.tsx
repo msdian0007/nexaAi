@@ -6,13 +6,16 @@ import {
   PROCESSING_LABELS,
 } from "./document.types";
 import type { LibraryDocument, DocumentStatus } from "./document.types";
+import { ApiError } from "../../services/api";
 
 export function DocumentLibrary({
   revision,
   latest,
+  onDeletion,
 }: {
   revision: number;
   latest: DocumentStatus | null;
+  onDeletion: (id: string) => void;
 }) {
   const { session, request } = useAuth();
   const organizationId = session?.organization.id ?? "";
@@ -21,6 +24,12 @@ export function DocumentLibrary({
   const [loading, setLoading] = useState(true);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState("");
+  const [canDelete, setCanDelete] = useState(false);
+  const [target, setTarget] = useState<LibraryDocument | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [notice, setNotice] = useState("");
+  const deletion = useRef<AbortController | null>(null);
+  const confirmation = useRef<HTMLHeadingElement>(null);
   const active = useRef<AbortController | null>(null);
   const retryCursor = useRef<string | null>(null);
   const load = useCallback(
@@ -47,6 +56,7 @@ export function DocumentLibrary({
           setCursor(data.page.nextCursor);
           setError("");
           setLoaded(true);
+          setCanDelete(data.canDelete);
         })
         .catch(() => {
           if (!controller.signal.aborted)
@@ -70,7 +80,8 @@ export function DocumentLibrary({
     void load(null, controller);
     return () => controller.abort();
   }, [load, revision]);
-  useEffect(() => () => active.current?.abort(), []);
+  useEffect(() => () => { active.current?.abort(); deletion.current?.abort(); }, []);
+  useEffect(() => { if (target) confirmation.current?.focus(); }, [target]);
 
   function fetchPage(after: string | null) {
     active.current?.abort();
@@ -81,6 +92,39 @@ export function DocumentLibrary({
     setError("");
     void load(after, controller);
   }
+  async function remove() {
+    if (!target || !canDelete || deletion.current) return;
+    active.current?.abort();
+    const controller = new AbortController(); deletion.current = controller;
+    setDeleting(true); setError(""); setNotice("");
+    try {
+      const result = await request<{ documentId: string; organizationId: string; deleted: boolean; cleanupPending: boolean }>(`/documents/${target.id}`, {
+        method: "DELETE", signal: controller.signal,
+      });
+      if (controller.signal.aborted) return;
+      if (result?.documentId !== target.id || result.organizationId !== organizationId ||
+          typeof result.deleted !== "boolean" || typeof result.cleanupPending !== "boolean" || result.deleted === result.cleanupPending)
+        throw new Error("Invalid deletion response");
+      onDeletion(target.id);
+      if (result.deleted) setItems(old => old.filter(item => item.id !== target.id));
+      else setItems(old => old.map(item => item.id === target.id ? { ...item, processingState: "DELETING", canRetry: false } : item));
+      setNotice(result.deleted ? "Document, searchable chunks and stored file deleted. Saved answers and citation details were kept."
+        : "Document is blocked from new questions. Cleanup is pending; use Finish deletion to retry cleanup.");
+      setTarget(null);
+      fetchPage(null);
+    } catch (failure) {
+      if (controller.signal.aborted) return;
+      // Do not automatically repeat a DELETE after an uncertain response.
+      setCanDelete(false); setTarget(null);
+      setError(failure instanceof ApiError && failure.status === 409
+        ? "The document is being processed or its storage needs attention. Wait, then refresh the library before trying again."
+        : failure instanceof ApiError && failure.status === 403 ? "Your permission to delete documents has changed. Refresh the library."
+        : "Could not confirm deletion. Refresh the library to check its saved state before trying again.");
+    } finally {
+      if (deletion.current === controller) deletion.current = null;
+      if (!controller.signal.aborted) setDeleting(false);
+    }
+  }
   return (
     <section className="document-library" aria-labelledby="library-heading">
       <h2 id="library-heading">Document library</h2>
@@ -90,18 +134,19 @@ export function DocumentLibrary({
       </p>
       <button
         className="secondary-button"
-        disabled={loading}
+        disabled={loading || deleting || !!target}
         onClick={() => fetchPage(null)}
       >
         Refresh library
       </button>
       {loading && <p role="status">Loading document library...</p>}
+      {notice && <p role="status">{notice}</p>}
       {error && (
         <p role="alert" className="form-error">
           {error}{" "}
           <button
             className="text-button"
-            disabled={loading}
+            disabled={loading || deleting || !!target}
             onClick={() => fetchPage(retryCursor.current)}
           >
             Retry library
@@ -121,7 +166,7 @@ export function DocumentLibrary({
         // The latest upload already polls on this page. Share that fresher state
         // with its library card without extra requests or changing its metadata.
         const document =
-          latest?.id === item.id &&
+          item.processingState !== "DELETING" && latest?.id === item.id &&
           Date.parse(latest.updatedAt) >= Date.parse(item.updatedAt)
             ? latest
             : item;
@@ -153,18 +198,28 @@ export function DocumentLibrary({
             {state === "RETRYING" && (
               <p>Another processing attempt is scheduled automatically.</p>
             )}
+            {state === "DELETING" && <p>This document is excluded from new questions. File or queue cleanup still needs to finish.</p>}
+            {canDelete && <button className="secondary-button" disabled={loading || deleting || !!target} onClick={() => setTarget(item)}>
+              {state === "DELETING" ? "Finish deletion of" : "Delete"} {item.originalName}
+            </button>}
           </article>
         );
       })}
       {cursor && !error && (
         <button
           className="secondary-button"
-          disabled={loading}
+          disabled={loading || deleting || !!target}
           onClick={() => fetchPage(cursor)}
         >
           Load more documents
         </button>
       )}
+      {target && <section className="upload-panel" aria-labelledby="confirm-document-deletion">
+        <h3 id="confirm-document-deletion" tabIndex={-1} ref={confirmation}>Confirm document deletion</h3>
+        <p>Delete {target.originalName} from {session?.organization.name}? This permanently removes its stored file and searchable chunks for everyone in this organization. Saved answers and their citation details remain. This cannot be undone.</p>
+        <button className="primary-button" disabled={deleting} onClick={() => void remove()}>{deleting ? "Deleting..." : "Confirm deletion"}</button>{" "}
+        <button className="secondary-button" disabled={deleting} onClick={() => setTarget(null)}>Cancel deletion</button>
+      </section>}
     </section>
   );
 }

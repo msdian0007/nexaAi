@@ -38,7 +38,7 @@ export function DocumentsPage() {
       !document ||
       pending ||
       error ||
-      ["READY", "FAILED", "NOT_QUEUED"].includes(processingState(document))
+      ["READY", "FAILED", "NOT_QUEUED", "DELETING"].includes(processingState(document))
     )
       return;
     const controller = new AbortController();
@@ -301,7 +301,13 @@ export function DocumentsPage() {
           )}
         </section>
       )}
-      <DocumentLibrary revision={libraryRevision} latest={document} />
+      <DocumentLibrary revision={libraryRevision} latest={document} onDeletion={(id) => {
+        if (document?.id === id) {
+          // Stop late status responses from restoring a document just deleted here.
+          active.current?.abort(); active.current = null;
+          setDocument(null); setPending(null); setError("");
+        }
+      }} />
     </section>
   );
 }

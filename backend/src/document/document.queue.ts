@@ -120,6 +120,23 @@ export async function createDocumentQueue(options: { url?: string; queueName?: s
         throw new DocumentJobRetryError();
       }
     },
+    async removeIfIdle(value: unknown): Promise<boolean> {
+      const data = parseDocumentJobData(value);
+      if (closed || connection.status !== 'ready') throw new DocumentQueueUnavailableError();
+      try {
+        const job = await withDeadline(readyQueue.getJob(`document-${data.organizationId}-${data.documentId}`));
+        if (!job) return true;
+        if (job.data.documentId !== data.documentId || job.data.organizationId !== data.organizationId)
+          throw new DocumentQueueUnavailableError();
+        // BullMQ's remove checks the job lock atomically. Never force-remove an
+        // active worker's job; it will observe deletion intent and stop safely.
+        try { await withDeadline(job.remove()); return true; }
+        catch {
+          if (await withDeadline(job.getState()) === 'active') return false;
+          throw new DocumentQueueUnavailableError();
+        }
+      } catch { throw new DocumentQueueUnavailableError(); }
+    },
     async close(): Promise<void> {
       if (closed) return;
       closed = true;

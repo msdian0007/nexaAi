@@ -8,6 +8,7 @@ import { AuthenticatedRequest } from "../auth/auth.middleware";
 import path from "path";
 import { getDocumentQueue, QueueProvider } from "./document.queue.runtime";
 import { DocumentJobRetryError } from "./document.queue";
+import { deleteOrganizationDocument, DocumentDeletionError, withDocumentSubmissionLock } from "./document.deletion";
 import {
   DocumentLibraryError,
   libraryPageInput,
@@ -18,6 +19,22 @@ import {
 // Test applications can provide an isolated queue; production uses the shared producer.
 const queueFor = (req: AuthenticatedRequest): QueueProvider =>
   req.app.locals.getDocumentQueue ?? getDocumentQueue;
+
+export const deleteDocument = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId, organizationId = req.user?.organizationId, documentId = req.params.documentId;
+    if (typeof userId !== "string" || !libraryUuid.test(userId) || typeof organizationId !== "string" || !libraryUuid.test(organizationId))
+      throw new DocumentDeletionError(401, "Valid identity is required");
+    if (typeof documentId !== "string" || !libraryUuid.test(documentId) || Object.keys(req.query).length ||
+        (req.body !== undefined && (!req.body || typeof req.body !== "object" || Array.isArray(req.body) || Object.keys(req.body).length)))
+      throw new DocumentDeletionError(400, "Provide only the document ID in the URL");
+    const data = await deleteOrganizationDocument(organizationId, userId, documentId, queueFor(req));
+    return res.status(data.cleanupPending ? 202 : 200).json({ success: true, data });
+  } catch (error) {
+    return res.status(error instanceof DocumentDeletionError ? error.status : 500).json({ success: false,
+      message: "Document deletion could not be completed. Refresh the library before trying again." });
+  }
+};
 
 export const documentLibrary = async (
   req: AuthenticatedRequest,
@@ -107,16 +124,18 @@ export const reprocessDocument = async (
           message: "Document is already queued, processing, or ready",
         });
     }
-    const queue = await queueFor(req)();
-    if (document.processingState === "FAILED") await queue.retryFailed(ids);
-    else await queue.enqueue(ids); // Also recovers a saved file whose original submission failed.
+    await withDocumentSubmissionLock(ids.documentId, ids.organizationId, async () => {
+      const queue = await queueFor(req)();
+      if (document.processingState === "FAILED") await queue.retryFailed(ids);
+      else await queue.enqueue(ids);
+    });
     return res.status(202).json({
       success: true,
       message: "Document accepted for background processing",
       data: documentView(document, "QUEUED"),
     });
   } catch (error) {
-    if (error instanceof DocumentJobRetryError) {
+    if (error instanceof DocumentJobRetryError || error instanceof DocumentDeletionError) {
       return res
         .status(409)
         .json({
@@ -182,10 +201,10 @@ export const uploadDocument = async (
       storagePath: path.relative(process.cwd(), req.file.path),
     });
     try {
-      const queue = await queueFor(req)();
-      await queue.enqueue({
-        documentId: document.id,
-        organizationId: req.user.organizationId,
+      const organizationId = req.user.organizationId;
+      await withDocumentSubmissionLock(document.id, organizationId, async () => {
+        const queue = await queueFor(req)();
+        await queue.enqueue({ documentId: document.id, organizationId });
       });
     } catch {
       // A lost acknowledgement does not prove Redis rejected the job. Keep the

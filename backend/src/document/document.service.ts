@@ -8,6 +8,7 @@ export type ProcessingState =
   | "READY"
   | "FAILED"
   | "NOT_QUEUED"
+  | "DELETING"
   | "UNAVAILABLE";
 
 // Only these fields are exposed to the browser, including on a saved-but-not-queued error.
@@ -39,7 +40,7 @@ export const getDocumentStatus = async (
 ) => {
   const document = await prisma.document.findFirst({
     where: { id: documentId, organizationId },
-    select: { id: true, originalName: true, status: true, updatedAt: true },
+    select: { id: true, originalName: true, status: true, updatedAt: true, deletionRequestedAt: true },
   });
   if (!document) return null;
   return resolveDocumentStatus(document, organizationId, queueProvider);
@@ -53,10 +54,12 @@ export async function resolveDocumentStatus(
     originalName: string;
     status: string;
     updatedAt: Date;
+    deletionRequestedAt?: Date | null;
   },
   organizationId: string,
   queueProvider: QueueProvider,
 ) {
+  if (document.deletionRequestedAt) return documentView(document, "DELETING");
   // The committed database result wins, even when Redis is down or removed its history.
   if (document.status === "COMPLETED") return documentView(document, "READY");
   try {

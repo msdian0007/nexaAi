@@ -11,6 +11,7 @@ export interface DocumentStatus {
     | "READY"
     | "FAILED"
     | "NOT_QUEUED"
+    | "DELETING"
     | "UNAVAILABLE";
   canRetry?: boolean;
 }
@@ -61,6 +62,7 @@ export function parseDocument(value: unknown): DocumentStatus {
         "READY",
         "FAILED",
         "NOT_QUEUED",
+        "DELETING",
         "UNAVAILABLE",
       ].includes(doc.processingState)) ||
     (doc.canRetry !== undefined && typeof doc.canRetry !== "boolean")
@@ -91,6 +93,7 @@ export const PROCESSING_LABELS = {
   FAILED: "Processing failed",
   RETRYING: "Retrying automatically",
   NOT_QUEUED: "Saved — processing not queued",
+  DELETING: "Deletion pending — blocked from questions",
   UNAVAILABLE: "Processing status temporarily unavailable",
 };
 export interface LibraryDocument extends DocumentStatus {
@@ -102,12 +105,14 @@ export interface LibraryDocument extends DocumentStatus {
 export function parseDocumentLibrary(value: unknown, organizationId: string) {
   const data = value as {
     organizationId: string;
+    canDelete?: boolean;
     documents: unknown[];
     page: { limit: number; hasMore: boolean; nextCursor: string | null };
   } | null;
   if (
     !data ||
     data.organizationId !== organizationId ||
+    (data.canDelete !== undefined && typeof data.canDelete !== "boolean") ||
     !Array.isArray(data.documents) ||
     !data.page ||
     !Number.isInteger(data.page.limit) ||
@@ -141,5 +146,5 @@ export function parseDocumentLibrary(value: unknown, organizationId: string) {
     (data.page.hasMore && !documents.length)
   )
     throw new Error("Invalid document page");
-  return { documents, page: data.page };
+  return { documents, canDelete: data.canDelete === true, page: data.page };
 }

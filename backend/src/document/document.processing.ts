@@ -18,7 +18,7 @@ export const markInterruptedDocumentFailed = async (
       SELECT pg_try_advisory_xact_lock(hashtextextended(${documentId}, 0)) AS acquired`;
     if (!lock?.acquired) return;
     await tx.document.updateMany({
-      where: { id: documentId, organizationId, status: "PROCESSING" },
+      where: { id: documentId, organizationId, status: "PROCESSING", deletionRequestedAt: null },
       data: {
         status: "FAILED",
         errorMessage:
@@ -42,7 +42,7 @@ export const processDocument = async (
       const [lock] = await tx.$queryRaw<{ acquired: boolean }[]>`
       SELECT pg_try_advisory_xact_lock(hashtextextended(${documentId}, 0)) AS acquired`;
       const document = await tx.document.findFirst({
-        where: { id: documentId, organizationId },
+        where: { id: documentId, organizationId, deletionRequestedAt: null },
       });
       if (!document) throw new DocumentNotFoundError();
       if (!lock?.acquired)
