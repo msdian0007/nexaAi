@@ -286,10 +286,22 @@ dd {
   font-size: 13px;
 }
 .answer-text {
-  white-space: pre-wrap;
   overflow-wrap: anywhere;
   color: #172b35;
 }
+/* Markdown blocks use their own spacing; long code scrolls inside the answer. */
+.answer-text > :first-child { margin-top: 0; }
+.answer-text > :last-child { margin-bottom: 0; }
+.answer-text p { white-space: pre-wrap; }
+.answer-text h3, .answer-text h4, .answer-text h5, .answer-text h6 { margin: 20px 0 10px; }
+.answer-text ul, .answer-text ol { padding-left: 24px; }
+.answer-text li { margin: 6px 0; }
+.answer-text blockquote { margin: 16px 0; padding-left: 16px; border-left: 3px solid #b9c9ce; }
+.answer-text pre { max-width: 100%; overflow-x: auto; padding: 14px; border-radius: 8px; background: #edf4f2; }
+.answer-text code { font-family: Consolas, monospace; font-size: 0.9em; }
+.answer-text :not(pre) > code { padding: 2px 5px; border-radius: 4px; background: #edf4f2; }
+.answer-text pre code { white-space: pre; overflow-wrap: normal; }
+.answer-text a { color: #126b63; text-decoration: underline; }
 .asked-question {
   overflow-wrap: anywhere;
 }

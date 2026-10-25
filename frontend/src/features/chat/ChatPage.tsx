@@ -6,6 +6,7 @@ import { ApiError } from "../../services/api";
 import { parseChatAnswer } from "./chat.types";
 import type { ChatAnswer } from "./chat.types";
 import { ConversationList } from "./ConversationList";
+import { AnswerMarkdown } from "./AnswerMarkdown";
 import { isId, parseMessages } from "./history.types";
 import type { HistoryMessage } from "./history.types";
 
@@ -16,8 +17,8 @@ const labels = {
 };
 type Exchange = { id: string; question: string; answer: ChatAnswer };
 
-// Render stored and newly generated answers the same way. React escapes all text,
-// including filenames; passage numbers represent chunks, not PDF pages.
+// Stored and newly generated answers share safe Markdown formatting. Source cards
+// remain plain React text; passage numbers represent chunks, not PDF pages.
 function AnswerView({
   answer,
   focus = false,
@@ -35,7 +36,7 @@ function AnswerView({
       <h2 tabIndex={-1} ref={heading}>
         {labels[answer.status]}
       </h2>
-      <p className="answer-text">{answer.answer}</p>
+      <AnswerMarkdown text={answer.answer} />
       {answer.sources.length ? (
         <section aria-label="Answer sources">
           <h3>Sources</h3>

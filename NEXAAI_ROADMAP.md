@@ -4,19 +4,20 @@ Last updated: **2026-10-25**.
 
 ## START HERE: where we are
 
-**Current phase: Phase 9 — remaining chat features.**
-**Last completed step: 9.1 — Private conversation deletion.**
-**Next implementation step: 9.2 — Safe answer Markdown rendering.**
+**Current phase: Phase 9 complete for planned local scope; next is Phase 12 — AI agents.**
+**Last completed step: 9.2 — Safe answer Markdown rendering.**
+**Next implementation step: 12.1 — Define agent tools, inputs, outputs, and permissions.**
 
-Step 9.1 deletes your own private conversation after confirmation, including its
-messages and saved source details. Uploaded documents remain available; a late answer
-cannot recreate the deleted chat. [Deletion flow and examples](backend/docs/chat-step-1-conversation-deletion.md).
-Both builds, changed-file lint, 19 backend conversation tests and 20 browser chat/history/switch tests passed.
+Step 9.2 formats new and saved answers as Markdown, including lists and code blocks.
+Raw HTML stays escaped, unsafe links are not clickable, and generated image URLs
+are not fetched. Source cards remain separate validated evidence.
+[Formatting flow, examples, and safety rules](frontend/docs/chat-step-2-safe-markdown.md).
+The frontend build, changed-file lint and all 25 scoped browser tests passed.
 
 **Phase 11 is DONE for the verified local workflow.** A real Chrome journey passed:
 queued upload, separate worker, automatic status updates, failed-file retry, a cited
 Gemini answer, and reopening the saved answer after a new login. Organization-isolation
-checks passed too. We now return to the earlier gaps in Phases 4, 5, and 9, as planned.
+checks passed too. The planned local gaps in Phases 4, 5, and 9 are now complete.
 
 | Phase 11 step | Status | What that means |
 | --- | --- | --- |
@@ -157,8 +158,8 @@ job is retained. It does not guarantee that processing can never run twice after
 
 **What exists today:** Redis + producer + worker + preparation/recovery + queued uploads
 and automatic status checks, with latest-upload retry controls.
-**What comes next:** return to unfinished organization, document-library, and chat features,
-continuing with safe answer Markdown in Step 9.2 after completing private chat deletion.
+**What comes next:** Phase 12.1 defines the tools an agent may use, their inputs and
+outputs, and the organization permissions enforced before each tool runs.
 
 ## 3. How we will work from now on
 
@@ -194,22 +195,22 @@ flowchart TD
     E --> F[6 Text extraction and chunks]
     F --> G[7 Embeddings and search]
     G --> H[8 Answers using Gemini and sources]
-    H --> I[9 Chat screens - PARTIAL]
+    H --> I[9 Chat screens - DONE locally]
     I --> J[10 Saved conversation history]
     J --> K[11 Background processing - DONE locally]
-    K --> L[Phases 4 and 5 DONE; 9.1 DONE; NEXT 9.2 safe Markdown]
-    L --> M[12 AI agents]
+    K --> L[Earlier gaps in Phases 4, 5 and 9 - DONE locally]
+    L --> M[12 AI agents - NEXT 12.1 tool boundaries]
     M --> N[13 Analytics dashboard]
     N --> O[14 Security and resource limits]
     O --> P[15 Monitoring and audit history]
     P --> Q[16 Full-system testing]
     Q --> R[17 Application containers and automated checks]
     R --> S[18 Deployment and production validation]
-    style L fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
+    style M fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
 ```
 
 Text route: **1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 (done locally)
--> finish earlier gaps (current: 9.2) -> 12 -> 13 -> 14 -> 15 -> 16 -> 17 -> 18.**
+-> earlier gaps complete -> 12 (next: 12.1) -> 13 -> 14 -> 15 -> 16 -> 17 -> 18.**
 
 Some work was implemented in a different chronological order. We keep the original
 phase identities and explicitly return to unfinished features instead of hiding them.
@@ -227,10 +228,10 @@ Future steps are a working plan; explain and record changes before implementing 
 | 6 Document processing | DONE for core flow | Extract text and split it into chunks; invoked by the worker and verified in the live 11.6 journey. | Broader document-format evaluation remains in Phase 16. |
 | 7 Embeddings and search | DONE for core flow | Local embeddings, stored vectors, organization-scoped similarity search. | More retrieval evaluation remains in Phase 16. |
 | 8 RAG answers | DONE for core flow | Retrieved evidence, Gemini answers, validated citations, missing/conflicting evidence handling. | More answer-quality cases remain in Phase 16. |
-| 9 Chat interface | PARTIAL | Ask questions, answers/sources, loading/errors, new conversation, confirmed private conversation deletion. | Safe Markdown rendering. |
+| 9 Chat interface | DONE for planned local flow | Ask questions, answers/sources, loading/errors, new conversation, confirmed private conversation deletion, safe Markdown for new and saved answers. | Standard Markdown only; tables, syntax highlighting and conversational memory are outside this step. |
 | 10 Conversation history | DONE for core flow | Save exchanges, list/read history, pagination, reopen and continue, backend live verification. | Earlier messages are NOT yet passed to Gemini as conversation context. |
 
-### Return to these earlier phase steps now that Phase 11 is complete
+### Earlier phase steps completed after Phase 11
 
 | Step | Planned work | How you validate it |
 | --- | --- | --- |
@@ -243,7 +244,7 @@ Future steps are a working plan; explain and record changes before implementing 
 | 5.2 DONE | Confirmed deletion with current-role checks, processing/submission locks, durable blocked state, queue/file cleanup and Finish deletion. | Real PostgreSQL/Redis/file tests and browser checks passed; saved citation snapshots preserved. [Guide](backend/docs/document-step-2-deletion.md). |
 | 5.3 DONE | Retry/start saved library files, track progress, preserve pages and require a read after uncertain submissions; enforce current membership before retry. | 26 backend and 27 browser document tests passed. [Guide](backend/docs/document-step-3-library-retries.md). |
 | 9.1 DONE | Confirmed private conversation deletion with current membership, ownership checks, cascaded messages/sources and late-answer protection. | 19 backend and 20 browser conversation/chat/history/switch tests passed. [Guide](backend/docs/chat-step-1-conversation-deletion.md). |
-| 9.2 NEXT | Render answer Markdown safely. | Lists/code display clearly and embedded unsafe HTML does not execute. |
+| 9.2 DONE | Format new and saved answers with safe Markdown, explicit web links, image descriptions and contained code scrolling. | Frontend build, changed-file lint and 25 browser tests passed, including unsafe HTML/URLs, images and narrow screens. [Guide](frontend/docs/chat-step-2-safe-markdown.md). |
 
 Possible later extension: using earlier turns as model context. Decide its scope
 separately; saved history alone does not implement conversational memory.
@@ -259,7 +260,7 @@ flowchart LR
     C --> D[11.4 Recovery - DONE]
     D --> E[11.5 Upload and UI integration - DONE]
     E --> F[11.6 End-to-end validation - DONE]
-    F --> G[Phases 4 and 5 DONE; 9.1 DONE; 9.2 safe Markdown NEXT]
+    F --> G[Phases 4, 5 and 9 DONE; NEXT 12.1 agent tool boundaries]
     style G fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
 ```
 
@@ -295,7 +296,7 @@ are implemented explicitly; the model does not get unrestricted application acce
 
 Flow: **request -> choose allowed tool -> validate permission -> run tool -> explain result**.
 
-- [ ] **12.1** Define allowed requests, tool inputs, outputs, and organization boundaries.
+- [ ] **12.1 NEXT** Define allowed requests, tool inputs, outputs, and organization boundaries.
 - [ ] **12.2** Wrap the existing document-answer flow as the knowledge tool.
 - [ ] **12.3** Add a data-analysis tool with read-only, scoped queries and result limits.
 - [ ] **12.4** Add routing that selects a tool or asks for clarification.
@@ -418,6 +419,7 @@ Useful existing evidence:
 - [5.2 Document deletion, recovery, worker coordination and saved citations](backend/docs/document-step-2-deletion.md)
 - [5.3 Library retry controls, automatic progress, and uncertain submissions](backend/docs/document-step-3-library-retries.md)
 - [9.1 Private conversation deletion, ownership, cascades, and late answers](backend/docs/chat-step-1-conversation-deletion.md)
+- [9.2 Safe Markdown, formatting examples, URL restrictions and browser verification](frontend/docs/chat-step-2-safe-markdown.md)
 
 Before advancing a step, check:
 
@@ -428,5 +430,5 @@ Before advancing a step, check:
 - [ ] Any remaining limitation is visible here.
 - [ ] The tracker has been updated and I know the next step.
 
-**Next lesson: 9.2 — render answer Markdown safely, so lists and code display clearly
-while embedded unsafe HTML cannot execute.**
+**Next lesson: 12.1 — define which tools the agent may use, what each accepts and
+returns, and how current organization permissions restrict every call.**
