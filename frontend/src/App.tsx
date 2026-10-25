@@ -7,6 +7,7 @@ import "./App.css";
 import { DocumentsPage } from './features/documents/DocumentsPage';
 import { ChatPage } from './features/chat/ChatPage';
 import { OrganizationPage } from './features/organization/OrganizationPage';
+import { MembersPage } from './features/organization/MembersPage';
 
 function AuthPage({ mode }: { mode: "login" | "register" }) {
   const { status, signIn, notice } = useAuth();
@@ -107,6 +108,7 @@ function AppRoutes() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/documents" element={<DocumentsPage />} />
             <Route path="/organization" element={<OrganizationPage />} />
+            <Route path="/organization/members" element={<MembersPage />} />
             {/* Chat shares the same verified-session guard as the other workspace pages. */}
             <Route path="/chat" element={<ChatPage />} />
           </Route>

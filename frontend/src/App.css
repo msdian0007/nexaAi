@@ -344,3 +344,17 @@ dd {
     grid-template-columns: 1fr;
   }
 }
+.members-page select {
+  display: block;
+  width: 100%;
+  min-height: 46px;
+  padding: 10px;
+  margin: 8px 0 16px;
+  font: inherit;
+  background: white;
+  color: #17243b;
+  border: 1px solid #a6b2c4;
+  border-radius: 8px;
+}
+.member-card { margin: 20px 0; overflow-wrap: anywhere; }
+.member-card button { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }

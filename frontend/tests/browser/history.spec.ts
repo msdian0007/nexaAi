@@ -60,15 +60,17 @@ test('unavailable conversation blocks submission while a new conversation remain
 });
 
 test('list and message failures offer retry without losing loaded data', async ({ page }) => {
-  let attempts = 0;
+  // A repeated load must not consume the failure intended for the retry scenario.
+  let failing = true;
   await page.route('**/chat/conversations?*', route => {
-    attempts++;
     if (new URL(route.request().url()).searchParams.get('cursor') === 'more') {
       return route.fulfill({ json: { success: true, data: { conversations: [summary(b, 'Benefits')], page: end } } });
     }
-    return route.fulfill(attempts === 1 ? { status: 503, json: { success: false } } : { json: { success: true, data: { conversations: [summary(a, 'Leave policy')], page: { hasMore: true, nextCursor: 'more' } } } });
+    return route.fulfill(failing ? { status: 503, json: { success: false } } : { json: { success: true, data: { conversations: [summary(a, 'Leave policy')], page: { hasMore: true, nextCursor: 'more' } } } });
   });
   await page.getByRole('button', { name: 'Refresh conversations' }).click();
+  await expect(page.getByRole('button', { name: 'Retry conversations' })).toBeVisible();
+  failing = false;
   await page.getByRole('button', { name: 'Retry conversations' }).click();
   await expect(page.getByRole('button', { name: 'Load more conversations' })).toBeVisible();
   await page.getByRole('button', { name: 'Load more conversations' }).click();

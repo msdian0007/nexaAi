@@ -131,13 +131,14 @@ test("failed saves preserve the draft; revoked permission removes editing contro
 test("load failures can be retried and foreign profile responses are rejected", async ({
   page,
 }) => {
-  let reads = 0;
+  // Keep the invalid response stable across StrictMode's repeated mount reads.
+  let invalid = true;
   await page.route("**/api/v1/organizations/profile", (route) =>
     route.fulfill({
       json: {
         success: true,
         data:
-          ++reads === 1
+          invalid
             ? { ...profile, id: "foreign-org", name: "Private Team" }
             : profile,
       },
@@ -146,6 +147,7 @@ test("load failures can be retried and foreign profile responses are rejected", 
   await page.getByRole("link", { name: "Organization", exact: true }).click();
   await expect(page.getByRole("alert")).toContainText("Could not load");
   await expect(page.getByText("Private Team")).toHaveCount(0);
+  invalid = false;
   await page.getByRole("button", { name: "Reload profile" }).click();
   await expect(page.getByLabel("Organization display name")).toHaveValue(
     "Sample Team",

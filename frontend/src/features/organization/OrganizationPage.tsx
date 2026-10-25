@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "../auth/auth.context";
 import { ApiError } from "../../services/api";
 
@@ -129,6 +130,7 @@ export function OrganizationPage() {
         Organization profile
       </h1>
       <p>View your organization details. Only an owner can change its name.</p>
+      <p><Link to="/organization/members">Members</Link></p>
       {loading && <p role="status">Loading organization profile...</p>}
       {error && (
         <p role="alert" className="form-error">
