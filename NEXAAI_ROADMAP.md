@@ -5,12 +5,12 @@ Last updated: **2026-10-25**.
 ## START HERE: where we are
 
 **Current phase: returning to Phase 4 — Organization management.**
-**Last completed step: 4.1 — Review and enforce organization member permissions.**
-**Next implementation step: 4.2 — Organization profile API and screen.**
+**Last completed step: 4.2 — Organization profile API and screen.**
+**Next implementation step: 4.3 — Member-management screens.**
 
-Step 4.1 now checks current database membership, limits administrator actions, protects
-owners, and serializes concurrent membership changes. The build and 10 reported
-permission tests passed. [Permission table, flow and evidence](backend/docs/organization-step-1-permissions.md).
+Step 4.2 adds an Organization page: current members can view the profile and owners
+can rename it. The confirmed name updates the current session. Both builds, lint,
+16 backend tests and 32 browser tests passed. [Profile flow and evidence](backend/docs/organization-step-2-profile.md).
 
 **Phase 11 is DONE for the verified local workflow.** A real Chrome journey passed:
 queued upload, separate worker, automatic status updates, failed-file retry, a cited
@@ -155,7 +155,7 @@ job is retained. It does not guarantee that processing can never run twice after
 **What exists today:** Redis + producer + worker + preparation/recovery + queued uploads
 and automatic status checks, with latest-upload retry controls.
 **What comes next:** return to unfinished organization, document-library, and chat features,
-continuing with organization profiles in Step 4.2 after completing the permission review.
+continuing with member-management screens in Step 4.3 after permissions and profiles.
 
 ## 3. How we will work from now on
 
@@ -194,7 +194,7 @@ flowchart TD
     H --> I[9 Chat screens - PARTIAL]
     I --> J[10 Saved conversation history]
     J --> K[11 Background processing - DONE locally]
-    K --> L[Finish Phase 4, 5, and 9 gaps - NEXT 4.2]
+    K --> L[Finish Phase 4, 5, and 9 gaps - NEXT 4.3]
     L --> M[12 AI agents]
     M --> N[13 Analytics dashboard]
     N --> O[14 Security and resource limits]
@@ -206,7 +206,7 @@ flowchart TD
 ```
 
 Text route: **1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 (done locally)
--> finish earlier gaps (current: 4.2) -> 12 -> 13 -> 14 -> 15 -> 16 -> 17 -> 18.**
+-> finish earlier gaps (current: 4.3) -> 12 -> 13 -> 14 -> 15 -> 16 -> 17 -> 18.**
 
 Some work was implemented in a different chronological order. We keep the original
 phase identities and explicitly return to unfinished features instead of hiding them.
@@ -219,7 +219,7 @@ Future steps are a working plan; explain and record changes before implementing 
 | 1 Foundation | DONE for local core | React, Express, TypeScript, Prisma, PostgreSQL/pgvector, health API. | Full app containers are Phase 17. |
 | 2 Authentication and isolation | DONE for core flow | Register, password login, signed tokens, organization membership and scoped document/chat access. | Broader security review remains in Phase 14. |
 | 3 Authentication screens | DONE for core flow | Login/register, protected navigation, sign out, safe request handling. | Refresh currently requires login again; production session design is Phase 14. |
-| 4 Organization management | PARTIAL | Member APIs enforce current membership, owner/admin/member policy, tenant isolation and owner protection; tested in 4.1. | Profile APIs/UI, management screens, invitations, organization switching. |
+| 4 Organization management | PARTIAL | Member permissions verified in 4.1; profile API/screen with owner-only name editing added in 4.2. | Member-management screens, invitations, organization switching. |
 | 5 Document management | PARTIAL | PDF/DOCX/TXT upload, local storage, background processing status, latest-upload retry UI. | Full document list, deletion and library retry controls; cloud storage is Phase 18. |
 | 6 Document processing | DONE for core flow | Extract text and split it into chunks; invoked by the worker and verified in the live 11.6 journey. | Broader document-format evaluation remains in Phase 16. |
 | 7 Embeddings and search | DONE for core flow | Local embeddings, stored vectors, organization-scoped similarity search. | More retrieval evaluation remains in Phase 16. |
@@ -232,8 +232,8 @@ Future steps are a working plan; explain and record changes before implementing 
 | Step | Planned work | How you validate it |
 | --- | --- | --- |
 | 4.1 DONE | Enforce current membership and conservative role permissions; protect owners; serialize member changes. | Build and 10 tests passed, including stale-token denial, isolation and concurrent promotion/removal. [Evidence](backend/docs/organization-step-1-permissions.md). |
-| 4.2 NEXT | Add organization profile API and screen. | View/edit the intended organization's profile with appropriate permissions. |
-| 4.3 | Add member and role-management screens. | An authorized owner can add an existing user, adjust allowed roles, and remove membership. |
+| 4.2 DONE | Current members view their profile; owners edit the display name; the current browser session reflects confirmed changes. | Both builds, lint, 16 backend and 32 browser tests passed. [Guide](backend/docs/organization-step-2-profile.md). |
+| 4.3 NEXT | Add member and role-management screens, explaining the existing conversation-deletion effect before removal. | Authorized users manage members according to Step 4.1; protected owners and other organizations remain inaccessible. |
 | 4.4 | Add invitation creation and acceptance, with expiry. | A test invite works once and an expired invite is rejected; sending real invitations is a separate explicit action. |
 | 4.5 | Add organization switching. | A member of two organizations switches context and sees only the selected organization's data. |
 | 5.1 | Add a paginated document library. | Earlier uploads remain visible with their latest status. |
@@ -256,7 +256,7 @@ flowchart LR
     C --> D[11.4 Recovery - DONE]
     D --> E[11.5 Upload and UI integration - DONE]
     E --> F[11.6 End-to-end validation - DONE]
-    F --> G[4.1 Permissions - DONE; 4.2 Profile - NEXT]
+    F --> G[4.1 Permissions and 4.2 Profile - DONE; 4.3 Members - NEXT]
     style G fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
 ```
 
@@ -407,6 +407,7 @@ Useful existing evidence:
 - [11.5 Background uploads, status polling, and saved-file retry](backend/docs/redis-step-5-background-uploads.md)
 - [11.6 Complete live browser journey and Phase 11 completion](backend/docs/redis-step-6-live-user-journey.md)
 - [4.1 Organization member permission rules and verification](backend/docs/organization-step-1-permissions.md)
+- [4.2 Organization profile API, screen, and validation](backend/docs/organization-step-2-profile.md)
 
 Before advancing a step, check:
 
@@ -417,5 +418,5 @@ Before advancing a step, check:
 - [ ] Any remaining limitation is visible here.
 - [ ] The tracker has been updated and I know the next step.
 
-**Next lesson: 4.2 — view the organization's profile and let authorized users edit
-its permitted details through a scoped API and screen.**
+**Next lesson: 4.3 — view teammates and manage permitted memberships through a screen,
+with clear role restrictions and an explanation before removing a membership.**

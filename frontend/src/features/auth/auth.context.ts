@@ -8,6 +8,7 @@ export interface AuthState {
   notice: string;
   signIn: (session: AuthSession) => void;
   signOut: () => void;
+  updateOrganization: (organization: AuthSession["organization"]) => void;
   retry: () => void;
   request: <T>(
     path: string,

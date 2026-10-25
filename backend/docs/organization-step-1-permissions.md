@@ -2,6 +2,9 @@
 
 Completed and verified locally on **2026-10-25**. Next: **4.2, organization profile API and screen**.
 
+Checkpoint note: Step 4.2 is now complete. See [the profile guide](organization-step-2-profile.md)
+and the main roadmap for the current next step, 4.3.
+
 ## Why we returned to Phase 4
 
 Phase 11's background document workflow is complete for the documented local scope.

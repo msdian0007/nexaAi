@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { AuthContext } from "./auth.context";
 import type { AuthState } from "./auth.context";
@@ -15,13 +15,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const verification = useRef<AbortController | null>(null);
   useEffect(() => () => verification.current?.abort(), []);
 
-  function clear(message = "") {
+  const clear = useCallback((message = "") => {
     verification.current?.abort();
     current.current = null;
     setSession(null);
     setStatus("anonymous");
     setNotice(message);
-  }
+  }, []);
+
+  const updateOrganization = useCallback(
+    (organization: AuthSession["organization"]) => {
+      const owner = current.current;
+      if (
+        !owner ||
+        owner.organization.id !== organization.id ||
+        (owner.organization.name === organization.name &&
+          owner.organization.slug === organization.slug)
+      )
+        return;
+      // Synchronize the confirmed profile across Dashboard, Documents and Chat.
+      // A profile response cannot switch the signed-in organization.
+      const next = { ...owner, organization };
+      current.current = next;
+      setSession(next);
+    },
+    [],
+  );
 
   async function verify(candidate: AuthSession) {
     verification.current?.abort();
@@ -75,30 +94,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void verify(candidate);
   }
 
-  async function request<T>(
-    path: string,
-    options: Omit<RequestOptions, "token"> = {},
-  ): Promise<T> {
-    const owner = current.current;
-    if (!owner || status !== "authenticated")
-      throw new ApiError("Please sign in to continue.", 401);
-    try {
-      const result = await apiRequest<T>(path, {
-        ...options,
-        token: owner.token,
-      });
-      // A response started by a previous session cannot populate a new user's page.
-      if (current.current !== owner)
-        throw new DOMException("Session changed", "AbortError");
-      return result;
-    } catch (error) {
-      if (current.current !== owner)
-        throw new DOMException("Session changed", "AbortError");
-      if (error instanceof ApiError && error.status === 401)
-        clear("Your session has expired. Please sign in again.");
-      throw error;
-    }
-  }
+  const request = useCallback(
+    async <T,>(
+      path: string,
+      options: Omit<RequestOptions, "token"> = {},
+    ): Promise<T> => {
+      const owner = current.current;
+      if (!owner || status !== "authenticated")
+        throw new ApiError("Please sign in to continue.", 401);
+      try {
+        const result = await apiRequest<T>(path, {
+          ...options,
+          token: owner.token,
+        });
+        // A response started by a previous session cannot populate a new user's page.
+        if (current.current !== owner)
+          throw new DOMException("Session changed", "AbortError");
+        return result;
+      } catch (error) {
+        if (current.current !== owner)
+          throw new DOMException("Session changed", "AbortError");
+        if (error instanceof ApiError && error.status === 401)
+          clear("Your session has expired. Please sign in again.");
+        throw error;
+      }
+    },
+    [status, clear],
+  );
 
   return (
     <AuthContext.Provider
@@ -112,6 +134,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (current.current) void verify(current.current);
         },
         request,
+        updateOrganization,
       }}
     >
       {children}

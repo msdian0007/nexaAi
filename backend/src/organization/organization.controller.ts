@@ -1,6 +1,7 @@
 import { Response } from "express";
 import { AuthenticatedRequest } from "../auth/auth.middleware";
 import { Role } from "../../generated/prisma/client";
+import { getOrganizationProfile, updateOrganizationProfile } from "./organization.service";
 import {
   addOrganizationMember,
   getOrganizationMembers,
@@ -10,6 +11,26 @@ import {
 } from "./organization.service";
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export const getProfile = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const actor = identity(req);
+    return res.json({ success: true, data: await getOrganizationProfile(actor.organizationId, actor.userId) });
+  } catch (error) { return failure(res, error); }
+};
+
+export const updateProfile = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const actor = identity(req);
+    const body = req.body;
+    if (!body || typeof body !== "object" || Array.isArray(body) ||
+        Object.keys(body).some(key => key !== "name") || typeof body.name !== "string" ||
+        !body.name.trim() || body.name.trim().length > 100 || /[\u0000-\u001f\u007f]/.test(body.name)) {
+      throw new OrganizationPermissionError(400, "Provide only a name containing 1 to 100 characters without control characters");
+    }
+    return res.json({ success: true, data: await updateOrganizationProfile(actor.organizationId, actor.userId, body.name.trim()) });
+  } catch (error) { return failure(res, error); }
+};
 function identity(req: AuthenticatedRequest) {
   const user = req.user;
   if (

@@ -13,7 +13,7 @@ export class ApiError extends Error {
 }
 
 export type RequestOptions = {
-  method?: "GET" | "POST";
+  method?: "GET" | "POST" | "PATCH";
   body?: unknown;
   token?: string;
   signal?: AbortSignal;
@@ -96,7 +96,9 @@ export function createApiClient(
             : undefined,
           // Views must validate this before use. A failed queue submission can
           // still include a safely scoped, saved document that the user can recover.
-          isRecord(payload) && payload.code === "DOCUMENT_QUEUE_UNAVAILABLE" ? payload.data : undefined,
+          isRecord(payload) && payload.code === "DOCUMENT_QUEUE_UNAVAILABLE"
+            ? payload.data
+            : undefined,
         );
       }
       if (

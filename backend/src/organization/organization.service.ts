@@ -5,6 +5,24 @@ export class OrganizationPermissionError extends Error {
   constructor(public status: number, message: string) { super(message); }
 }
 const publicUser = { id: true, name: true, email: true, createdAt: true } as const;
+const publicProfile = { id: true, name: true, slug: true, createdAt: true, updatedAt: true } as const;
+
+export const getOrganizationProfile = (organizationId: string, userId: string) =>
+  withMembership(organizationId, userId, async (tx, role) => ({
+    ...await tx.organization.findUniqueOrThrow({ where: { id: organizationId }, select: publicProfile }),
+    role, canEdit: role === Role.OWNER,
+  }));
+
+export const updateOrganizationProfile = (organizationId: string, userId: string, name: string) =>
+  withMembership(organizationId, userId, async (tx, role) => {
+    if (role !== Role.OWNER) throw new OrganizationPermissionError(403, "Only an owner can edit the organization profile");
+    // Rename only the display name. IDs and the stable slug keep documents and
+    // memberships attached to the same organization; never spread request bodies.
+    const organization = await tx.organization.update({
+      where: { id: organizationId }, data: { name }, select: publicProfile,
+    });
+    return { ...organization, role, canEdit: true };
+  });
 
 // Serialize membership decisions per organization. Re-check the actor AFTER the
 // lock, so a concurrent removal/demotion cannot leave stale permission in flight.
