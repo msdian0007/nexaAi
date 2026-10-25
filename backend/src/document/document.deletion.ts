@@ -7,13 +7,28 @@ import { getDocumentQueue, QueueProvider } from "./document.queue.runtime";
 export class DocumentDeletionError extends Error {
   constructor(public status: number, message: string) { super(message); }
 }
-export async function withDocumentSubmissionLock<T>(documentId: string, organizationId: string, action: () => Promise<T>) {
+export async function requireProcessingMembership(userId: string, organizationId: string) {
+  const membership = await prisma.organizationMember.findUnique({
+    where: { userId_organizationId: { userId, organizationId } }, select: { id: true },
+  });
+  if (!membership) throw new DocumentDeletionError(403, "Current organization membership is required");
+}
+export async function withDocumentSubmissionLock<T>(documentId: string, organizationId: string, action: () => Promise<T>, userId?: string) {
   return prisma.$transaction(async tx => {
+    if (userId) {
+      // Match membership removal's organization lock, then recheck before the
+      // queue write. An old token cannot restore a removed membership.
+      await tx.$queryRaw`SELECT id FROM "Organization" WHERE id = ${organizationId} FOR UPDATE`;
+      const membership = await tx.organizationMember.findUnique({
+        where: { userId_organizationId: { userId, organizationId } }, select: { id: true },
+      });
+      if (!membership) throw new DocumentDeletionError(403, "Current organization membership is required");
+    }
     const [lock] = await tx.$queryRaw<{ acquired: boolean }[]>`
       SELECT pg_try_advisory_xact_lock(hashtextextended(${documentId}, 0)) AS acquired`;
     if (!lock?.acquired) throw new DocumentDeletionError(409, "Document state is changing");
-    const document = await tx.document.findFirst({ where: { id: documentId, organizationId, deletionRequestedAt: null }, select: { id: true } });
-    if (!document) throw new DocumentDeletionError(409, "Document is unavailable for processing");
+    const document = await tx.document.findFirst({ where: { id: documentId, organizationId, deletionRequestedAt: null }, select: { id: true, status: true } });
+    if (!document || document.status === "COMPLETED") throw new DocumentDeletionError(409, "Document is unavailable for processing");
     // Submission and deletion share a lock, so an earlier status read cannot
     // enqueue work after deletion finishes.
     return action();

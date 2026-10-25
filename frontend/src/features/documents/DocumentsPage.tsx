@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { useAuth } from "../auth/auth.context";
 import { ApiError } from "../../services/api";
@@ -25,6 +25,12 @@ export function DocumentsPage() {
   const fileInput = useRef<HTMLInputElement>(null);
   const errorElement = useRef<HTMLParagraphElement>(null);
   const headingElement = useRef<HTMLHeadingElement>(null);
+  const latestDocumentId = document?.id;
+  const updateLibraryProcessing = useCallback((next: DocumentStatus) => {
+    // Keep the latest-upload panel in sync when its library control is used.
+    setDocument(current => current?.id === next.id ? next : current);
+    if (latestDocumentId === next.id) setError("");
+  }, [latestDocumentId]);
   useEffect(() => {
     headingElement.current?.focus();
   }, []);
@@ -301,7 +307,7 @@ export function DocumentsPage() {
           )}
         </section>
       )}
-      <DocumentLibrary revision={libraryRevision} latest={document} onDeletion={(id) => {
+      <DocumentLibrary revision={libraryRevision} latest={document} onProcessingUpdate={updateLibraryProcessing} onDeletion={(id) => {
         if (document?.id === id) {
           // Stop late status responses from restoring a document just deleted here.
           active.current?.abort(); active.current = null;

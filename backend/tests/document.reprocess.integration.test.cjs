@@ -67,6 +67,7 @@ async function withDocument(run) {
     uploadedBy: { create: { id, name: "Retry test", email: `${id}@example.invalid`, password: "unused" } },
     chunks: { create: { chunkIndex: 0, content: "Old partial content", embeddingStatus: "FAILED" } },
   } });
+  await prisma.organizationMember.create({ data: { userId: id, organizationId: id, role: 'MEMBER' } });
   try { await run(document, tokenFor(id)); }
   finally {
     const job = await inspector.getJob(`document-${id}-${document.id}`);
@@ -129,10 +130,20 @@ test("concurrent retry of a retained failed job creates only one waiting instruc
 
 test("tenant mismatch and missing IDs return the same 404 without touching the job", async () => {
   await withDocument(async (document, token) => {
-    const wrong = await retry(document.id, tokenFor(randomUUID()), { organizationId: document.organizationId });
-    assert.equal(wrong.status, 404);
-    assert.deepEqual(wrong, await retry(randomUUID(), token));
+    await withDocument(async (_other, otherToken) => {
+      const wrong = await retry(document.id, otherToken, { organizationId: document.organizationId });
+      assert.equal(wrong.status, 404);
+      assert.deepEqual(wrong, await retry(randomUUID(), token));
+    });
     assert.equal(await inspector.getWaitingCount(), 0);
+  });
+});
+
+test("a removed member's old token cannot submit a retry", async () => {
+  await withDocument(async (document, token) => {
+    await prisma.organizationMember.delete({ where: { userId_organizationId: { userId: document.organizationId, organizationId: document.organizationId } } });
+    assert.equal((await retry(document.id, token)).status, 403);
+    assert.equal(await producer.getState({ documentId: document.id, organizationId: document.organizationId }), 'unknown');
   });
 });
 

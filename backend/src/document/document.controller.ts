@@ -8,7 +8,7 @@ import { AuthenticatedRequest } from "../auth/auth.middleware";
 import path from "path";
 import { getDocumentQueue, QueueProvider } from "./document.queue.runtime";
 import { DocumentJobRetryError } from "./document.queue";
-import { deleteOrganizationDocument, DocumentDeletionError, withDocumentSubmissionLock } from "./document.deletion";
+import { deleteOrganizationDocument, DocumentDeletionError, requireProcessingMembership, withDocumentSubmissionLock } from "./document.deletion";
 import {
   DocumentLibraryError,
   libraryPageInput,
@@ -97,6 +97,9 @@ export const reprocessDocument = async (
   const ids = identity(req, res);
   if (!ids) return;
   try {
+    if (typeof req.user?.userId !== "string" || !libraryUuid.test(req.user.userId))
+      return res.status(401).json({ success: false, message: "Valid user identity is required" });
+    await requireProcessingMembership(req.user.userId, ids.organizationId);
     // Scope the database read before touching Redis. A caller cannot retry another tenant's job.
     const document = await getDocumentStatus(
       ids.documentId,
@@ -128,13 +131,15 @@ export const reprocessDocument = async (
       const queue = await queueFor(req)();
       if (document.processingState === "FAILED") await queue.retryFailed(ids);
       else await queue.enqueue(ids);
-    });
+    }, req.user.userId);
     return res.status(202).json({
       success: true,
       message: "Document accepted for background processing",
       data: documentView(document, "QUEUED"),
     });
   } catch (error) {
+    if (error instanceof DocumentDeletionError && error.status === 403)
+      return res.status(403).json({ success: false, message: "Current organization membership is required" });
     if (error instanceof DocumentJobRetryError || error instanceof DocumentDeletionError) {
       return res
         .status(409)

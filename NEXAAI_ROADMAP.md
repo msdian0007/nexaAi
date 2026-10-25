@@ -4,16 +4,14 @@ Last updated: **2026-10-25**.
 
 ## START HERE: where we are
 
-**Current phase: Phase 5 — Document management.**
-**Last completed step: 5.2 — Document deletion.**
-**Next implementation step: 5.3 — Retry controls for older library documents.**
+**Current phase: Phase 5 complete; next is Phase 9 — remaining chat features.**
+**Last completed step: 5.3 — Retry controls for older library documents.**
+**Next implementation step: 9.1 — Private conversation deletion.**
 
-Step 5.2 adds owner/admin deletion with confirmation, active-processing protection,
-durable deletion intent and resumable queue/file cleanup. Saved answers and citation
-details remain. [Deletion flow and evidence](backend/docs/document-step-2-deletion.md).
-Both builds and changed-file lint passed. The deletion/library/status/retry suite
-passed 25 backend tests, the worker recovery suite passed 19 (including six overlapping
-retry tests), and all 21 browser deletion/library/upload tests passed.
+Step 5.3 retries failed or unqueued saved files directly from their library cards,
+tracks progress, preserves older loaded pages and requires a status read after an
+uncertain submission. [Library retry flow and evidence](backend/docs/document-step-3-library-retries.md).
+Both builds, changed-file lint, 26 backend document tests and all 27 browser document tests passed.
 
 **Phase 11 is DONE for the verified local workflow.** A real Chrome journey passed:
 queued upload, separate worker, automatic status updates, failed-file retry, a cited
@@ -31,8 +29,9 @@ checks passed too. We now return to the earlier gaps in Phases 4, 5, and 9, as p
 
 **Current limitation:** the successful live journey used a fictional TXT handbook and
 one generated answer; it is not a production load test or exhaustive format evaluation.
-Step 5.1 now lists earlier uploads. Older library cards show status from the last
-library read; Refresh library updates them. The latest upload still checks automatically.
+The library lists earlier uploads. Retried or explicitly refreshed cards now track
+active processing automatically; Refresh library updates other entries. The latest
+upload still checks automatically.
 
 ## 1. What are we building?
 
@@ -159,7 +158,7 @@ job is retained. It does not guarantee that processing can never run twice after
 **What exists today:** Redis + producer + worker + preparation/recovery + queued uploads
 and automatic status checks, with latest-upload retry controls.
 **What comes next:** return to unfinished organization, document-library, and chat features,
-continuing with retry controls for older library documents in Step 5.3.
+continuing with private conversation deletion in Step 9.1 after completing Phase 5.
 
 ## 3. How we will work from now on
 
@@ -198,7 +197,7 @@ flowchart TD
     H --> I[9 Chat screens - PARTIAL]
     I --> J[10 Saved conversation history]
     J --> K[11 Background processing - DONE locally]
-    K --> L[Phase 4 and 5.1-5.2 DONE; finish Phase 5 and 9 gaps - NEXT 5.3]
+    K --> L[Phases 4 and 5 DONE; finish Phase 9 gaps - NEXT 9.1]
     L --> M[12 AI agents]
     M --> N[13 Analytics dashboard]
     N --> O[14 Security and resource limits]
@@ -210,7 +209,7 @@ flowchart TD
 ```
 
 Text route: **1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 (done locally)
--> finish earlier gaps (current: 5.3) -> 12 -> 13 -> 14 -> 15 -> 16 -> 17 -> 18.**
+-> finish earlier gaps (current: 9.1) -> 12 -> 13 -> 14 -> 15 -> 16 -> 17 -> 18.**
 
 Some work was implemented in a different chronological order. We keep the original
 phase identities and explicitly return to unfinished features instead of hiding them.
@@ -224,7 +223,7 @@ Future steps are a working plan; explain and record changes before implementing 
 | 2 Authentication and isolation | DONE for core flow | Register, password login, signed tokens, organization membership and scoped document/chat access. | Broader security review remains in Phase 14. |
 | 3 Authentication screens | DONE for core flow | Login/register, protected navigation, sign out, safe request handling. | Refresh currently requires login again; production session design is Phase 14. |
 | 4 Organization management | DONE for planned local flow | Current-role permissions, profile editing, member screens, expiring invitations and organization switching. | Email delivery is manual; persistent sessions and global token revocation remain later work. |
-| 5 Document management | PARTIAL | Upload, local storage, background status, latest-upload retry, paginated library and coordinated owner/admin deletion. | Retry controls for older files; pending deletion cleanup requires explicit Finish deletion. Cloud storage is Phase 18. |
+| 5 Document management | DONE for planned local flow | Upload, background status, paginated library, coordinated owner/admin deletion, and retries for older saved files. | Pending deletion cleanup requires explicit Finish deletion. Cloud storage is Phase 18. |
 | 6 Document processing | DONE for core flow | Extract text and split it into chunks; invoked by the worker and verified in the live 11.6 journey. | Broader document-format evaluation remains in Phase 16. |
 | 7 Embeddings and search | DONE for core flow | Local embeddings, stored vectors, organization-scoped similarity search. | More retrieval evaluation remains in Phase 16. |
 | 8 RAG answers | DONE for core flow | Retrieved evidence, Gemini answers, validated citations, missing/conflicting evidence handling. | More answer-quality cases remain in Phase 16. |
@@ -242,8 +241,8 @@ Future steps are a working plan; explain and record changes before implementing 
 | 4.5 DONE | List current memberships, issue a scoped session for the selected team, verify its current role and reset workspace pages. | Real database document/history isolation and browser session/draft checks passed. [Guide](backend/docs/organization-step-5-switching.md). |
 | 5.1 DONE | Paginated organization library with safe metadata, queue-aware status, refresh, Load more and upload synchronization. | 12 backend library/status and 15 browser library/upload tests passed. [Guide](backend/docs/document-step-1-library.md). |
 | 5.2 DONE | Confirmed deletion with current-role checks, processing/submission locks, durable blocked state, queue/file cleanup and Finish deletion. | Real PostgreSQL/Redis/file tests and browser checks passed; saved citation snapshots preserved. [Guide](backend/docs/document-step-2-deletion.md). |
-| 5.3 NEXT | Extend Phase 11's latest-upload retry controls to the document library. | Older failed documents can be retried without duplicate processing, and status stays accurate. |
-| 9.1 | Add private conversation deletion. | Delete your own conversation; another user's conversation remains inaccessible. |
+| 5.3 DONE | Retry/start saved library files, track progress, preserve pages and require a read after uncertain submissions; enforce current membership before retry. | 26 backend and 27 browser document tests passed. [Guide](backend/docs/document-step-3-library-retries.md). |
+| 9.1 NEXT | Add private conversation deletion. | Delete your own conversation; another user's conversation remains inaccessible. |
 | 9.2 | Render answer Markdown safely. | Lists/code display clearly and embedded unsafe HTML does not execute. |
 
 Possible later extension: using earlier turns as model context. Decide its scope
@@ -260,7 +259,7 @@ flowchart LR
     C --> D[11.4 Recovery - DONE]
     D --> E[11.5 Upload and UI integration - DONE]
     E --> F[11.6 End-to-end validation - DONE]
-    F --> G[Phase 4 and 5.1-5.2 DONE; 5.3 Library retries - NEXT]
+    F --> G[Phases 4 and 5 DONE; 9.1 Conversation deletion - NEXT]
     style G fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
 ```
 
@@ -417,6 +416,7 @@ Useful existing evidence:
 - [4.5 Organization switching, scoped sessions, and workspace isolation](backend/docs/organization-step-5-switching.md)
 - [5.1 Document library, pagination, processing status and examples](backend/docs/document-step-1-library.md)
 - [5.2 Document deletion, recovery, worker coordination and saved citations](backend/docs/document-step-2-deletion.md)
+- [5.3 Library retry controls, automatic progress, and uncertain submissions](backend/docs/document-step-3-library-retries.md)
 
 Before advancing a step, check:
 
@@ -427,5 +427,5 @@ Before advancing a step, check:
 - [ ] Any remaining limitation is visible here.
 - [ ] The tracker has been updated and I know the next step.
 
-**Next lesson: 5.3 — retry an older failed or unqueued document directly from the
-library without reuploading it or creating duplicate processing instructions.**
+**Next lesson: 9.1 — delete one of your own private conversations, with confirmation
+and ownership checks that prevent deleting another person's conversation.**

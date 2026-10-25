@@ -7,15 +7,18 @@ import {
 } from "./document.types";
 import type { LibraryDocument, DocumentStatus } from "./document.types";
 import { ApiError } from "../../services/api";
+import { LibraryProcessingActions } from "./LibraryProcessingActions";
 
 export function DocumentLibrary({
   revision,
   latest,
   onDeletion,
+  onProcessingUpdate,
 }: {
   revision: number;
   latest: DocumentStatus | null;
   onDeletion: (id: string) => void;
+  onProcessingUpdate: (next: DocumentStatus) => void;
 }) {
   const { session, request } = useAuth();
   const organizationId = session?.organization.id ?? "";
@@ -32,6 +35,10 @@ export function DocumentLibrary({
   const confirmation = useRef<HTMLHeadingElement>(null);
   const active = useRef<AbortController | null>(null);
   const retryCursor = useRef<string | null>(null);
+  const updateProcessing = useCallback((next: DocumentStatus) => {
+    setItems(old => old.map(item => item.id === next.id ? { ...item, ...next } : item));
+    onProcessingUpdate(next);
+  }, [onProcessingUpdate]);
   const load = useCallback(
     (after: string | null, controller: AbortController) => {
       return request("/documents", {
@@ -199,6 +206,7 @@ export function DocumentLibrary({
               <p>Another processing attempt is scheduled automatically.</p>
             )}
             {state === "DELETING" && <p>This document is excluded from new questions. File or queue cleanup still needs to finish.</p>}
+            <LibraryProcessingActions document={document} disabled={loading || deleting || !!target} onUpdate={updateProcessing} />
             {canDelete && <button className="secondary-button" disabled={loading || deleting || !!target} onClick={() => setTarget(item)}>
               {state === "DELETING" ? "Finish deletion of" : "Delete"} {item.originalName}
             </button>}
