@@ -5,13 +5,13 @@ Last updated: **2026-10-25**.
 ## START HERE: where we are
 
 **Current phase: returning to Phase 4 — Organization management.**
-**Last completed step: 4.3 — Member-management screens.**
-**Next implementation step: 4.4 — Invitations with expiry.**
+**Last completed step: 4.4 — Invitations with expiry.**
+**Next implementation step: 4.5 — Organization switching.**
 
-Step 4.3 adds Organization -> Members: view teammates, add registered accounts,
-change permitted roles, and confirm membership removal after reading its effect on
-private conversations. [Member flow, examples and evidence](backend/docs/organization-step-3-members.md).
-Both builds, changed-file lint, 39 browser tests and 16 backend organization tests passed.
+Step 4.4 adds one-time invitation links for existing or new accounts, binds each link
+to an email and role, and rejects expired, revoked, reused, or wrong-email acceptance.
+[Invitation flow and evidence](backend/docs/organization-step-4-invitations.md).
+Both builds, changed-file lint, 22 backend organization tests and all 43 browser tests passed.
 
 **Phase 11 is DONE for the verified local workflow.** A real Chrome journey passed:
 queued upload, separate worker, automatic status updates, failed-file retry, a cited
@@ -156,7 +156,7 @@ job is retained. It does not guarantee that processing can never run twice after
 **What exists today:** Redis + producer + worker + preparation/recovery + queued uploads
 and automatic status checks, with latest-upload retry controls.
 **What comes next:** return to unfinished organization, document-library, and chat features,
-continuing with invitations in Step 4.4 after permissions, profiles and member screens.
+continuing with organization switching in Step 4.5 after the invitation workflow.
 
 ## 3. How we will work from now on
 
@@ -195,7 +195,7 @@ flowchart TD
     H --> I[9 Chat screens - PARTIAL]
     I --> J[10 Saved conversation history]
     J --> K[11 Background processing - DONE locally]
-    K --> L[Finish Phase 4, 5, and 9 gaps - NEXT 4.4]
+    K --> L[Finish Phase 4, 5, and 9 gaps - NEXT 4.5]
     L --> M[12 AI agents]
     M --> N[13 Analytics dashboard]
     N --> O[14 Security and resource limits]
@@ -207,7 +207,7 @@ flowchart TD
 ```
 
 Text route: **1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 (done locally)
--> finish earlier gaps (current: 4.4) -> 12 -> 13 -> 14 -> 15 -> 16 -> 17 -> 18.**
+-> finish earlier gaps (current: 4.5) -> 12 -> 13 -> 14 -> 15 -> 16 -> 17 -> 18.**
 
 Some work was implemented in a different chronological order. We keep the original
 phase identities and explicitly return to unfinished features instead of hiding them.
@@ -235,8 +235,8 @@ Future steps are a working plan; explain and record changes before implementing 
 | 4.1 DONE | Enforce current membership and conservative role permissions; protect owners; serialize member changes. | Build and 10 tests passed, including stale-token denial, isolation and concurrent promotion/removal. [Evidence](backend/docs/organization-step-1-permissions.md). |
 | 4.2 DONE | Current members view their profile; owners edit the display name; the current browser session reflects confirmed changes. | Both builds, lint, 16 backend and 32 browser tests passed. [Guide](backend/docs/organization-step-2-profile.md). |
 | 4.3 DONE | Member screens with fresh role checks, registered-account addition, role changes and removal confirmation. | Owner protection, restricted roles, cancellation, stale access and response isolation tested. [Guide](backend/docs/organization-step-3-members.md). |
-| 4.4 NEXT | Add invitation creation and acceptance, with expiry. | A test invite works once and an expired invite is rejected; sending real invitations is a separate explicit action. |
-| 4.5 | Add organization switching. | A member of two organizations switches context and sees only the selected organization's data. |
+| 4.4 DONE | Add one-time, email-bound invitation creation, revocation, registration and acceptance, with expiry. | 22 backend organization tests and invitation browser flows passed. Email delivery remains manual. [Guide](backend/docs/organization-step-4-invitations.md). |
+| 4.5 NEXT | Add organization switching. | A member of two organizations switches context and sees only the selected organization's data. |
 | 5.1 | Add a paginated document library. | Earlier uploads remain visible with their latest status. |
 | 5.2 | Add document deletion coordinated with active jobs, files, and chunks. | A deleted document cannot be retrieved for new answers; saved citation metadata is preserved. |
 | 5.3 | Extend Phase 11's latest-upload retry controls to the document library. | Older failed documents can be retried without duplicate processing, and status stays accurate. |
@@ -257,7 +257,7 @@ flowchart LR
     C --> D[11.4 Recovery - DONE]
     D --> E[11.5 Upload and UI integration - DONE]
     E --> F[11.6 End-to-end validation - DONE]
-    F --> G[4.1 Permissions, 4.2 Profile, 4.3 Members - DONE; 4.4 Invitations - NEXT]
+    F --> G[4.1 through 4.4 - DONE; 4.5 Organization switching - NEXT]
     style G fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
 ```
 
@@ -410,6 +410,7 @@ Useful existing evidence:
 - [4.1 Organization member permission rules and verification](backend/docs/organization-step-1-permissions.md)
 - [4.2 Organization profile API, screen, and validation](backend/docs/organization-step-2-profile.md)
 - [4.3 Member-management screen, examples, and confirmation flow](backend/docs/organization-step-3-members.md)
+- [4.4 Expiring invitation flow, security model, and examples](backend/docs/organization-step-4-invitations.md)
 
 Before advancing a step, check:
 
@@ -420,5 +421,5 @@ Before advancing a step, check:
 - [ ] Any remaining limitation is visible here.
 - [ ] The tracker has been updated and I know the next step.
 
-**Next lesson: 4.4 — create an invitation that a recipient can accept once before it
-expires. This adds an acceptance flow beyond directly adding an existing account.**
+**Next lesson: 4.5 — let a person with multiple memberships choose which organization
+is active, issue a correctly scoped session, and keep every screen tenant-isolated.**

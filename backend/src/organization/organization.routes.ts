@@ -7,6 +7,10 @@ import {
   updateRole,
   getProfile,
   updateProfile,
+  acceptInvitation,
+  createInvitation,
+  getInvitations,
+  revokeInvitation,
 } from "./organization.controller";
 
 const router = Router();
@@ -15,6 +19,10 @@ const router = Router();
 router.use(authenticate);
 router.get("/profile", getProfile);
 router.patch("/profile", updateProfile);
+router.get("/invitations", getInvitations);
+router.post("/invitations", createInvitation);
+router.post("/invitations/accept", acceptInvitation);
+router.delete("/invitations/:invitationId", revokeInvitation);
 router.get("/members", getMembers);
 router.post("/members", addMember);
 router.patch("/members/:memberId/role", updateRole);

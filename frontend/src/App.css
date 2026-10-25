@@ -356,5 +356,17 @@ dd {
   border: 1px solid #a6b2c4;
   border-radius: 8px;
 }
-.member-card { margin: 20px 0; overflow-wrap: anywhere; }
-.member-card button { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+.member-card {
+  margin: 20px 0;
+  overflow-wrap: anywhere;
+}
+.member-card button {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.members-page .owner-confirmation input {
+  width: auto;
+  min-height: auto;
+  margin-right: 8px;
+}

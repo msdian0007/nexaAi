@@ -172,6 +172,12 @@ export function MembersPage() {
       </h1>
       <p>
         <Link to="/organization">Organization profile</Link>
+        {manager && (
+          <>
+            {" "}
+            · <Link to="/organization/invitations">Invitations</Link>
+          </>
+        )}
       </p>
       <p>
         Members can view teammates. Administrators can add and remove regular

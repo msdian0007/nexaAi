@@ -29,6 +29,8 @@ model User {
 
   memberships OrganizationMember[]
   uploadedDocuments Document[]
+  createdInvitations OrganizationInvitation[] @relation("InvitationCreator")
+  acceptedInvitations OrganizationInvitation[] @relation("InvitationAcceptor")
 }
 
 model Organization {
@@ -40,6 +42,29 @@ model Organization {
 
   memberships OrganizationMember[]
   documents Document[]
+  invitations OrganizationInvitation[]
+}
+
+model OrganizationInvitation {
+  id             String   @id @default(uuid())
+  organizationId String
+  email          String
+  role           Role     @default(MEMBER)
+  // Only a SHA-256 digest is stored. The one-time secret exists only in the created link.
+  tokenHash      String   @unique @db.Char(64)
+  expiresAt      DateTime
+  acceptedAt     DateTime?
+  revokedAt      DateTime?
+  createdById    String
+  acceptedById   String?
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy    User         @relation("InvitationCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  acceptedBy   User?        @relation("InvitationAcceptor", fields: [acceptedById], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt])
+  @@index([email, expiresAt])
 }
 
 model OrganizationMember {

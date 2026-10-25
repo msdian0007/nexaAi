@@ -16,7 +16,8 @@
     "test:document-background": "npm run build && node --test tests/document.pipeline.e2e.test.cjs tests/document.status.integration.test.cjs tests/document.reprocess.integration.test.cjs tests/document.queue.runtime.test.cjs",
     "test:phase11-live": "npm run build && node --test tests/phase11.live.browser.test.cjs",
     "test:organization-permissions": "npm run build && node --test tests/organization.permissions.integration.test.cjs",
-    "test:organization-profile": "npm run build && node --test tests/organization.profile.integration.test.cjs tests/organization.permissions.integration.test.cjs"
+    "test:organization-profile": "npm run build && node --test tests/organization.profile.integration.test.cjs tests/organization.permissions.integration.test.cjs",
+    "test:organization-invitations": "npm run build && node --test tests/organization.invitations.integration.test.cjs tests/organization.profile.integration.test.cjs tests/organization.permissions.integration.test.cjs"
   },
   "keywords": [],
   "author": "",

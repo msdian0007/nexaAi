@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 import { comparePassword, hashPassword } from "./auth.utils";
 import { LoginInput, RegisterInput } from "./auth.types";
 import prisma from "../config/database";
+import { registerFromOrganizationInvitation } from "../organization/organization.service";
 
 export const registerUser = async (data: RegisterInput) => {
   const { name, email, password, organizationName } = data;
@@ -66,8 +67,9 @@ export const registerUser = async (data: RegisterInput) => {
     },
     process.env.JWT_SECRET as string,
     {
-      expiresIn: (process.env.JWT_EXPIRES_IN || "1d") as jwt.SignOptions["expiresIn"],
-    }
+      expiresIn: (process.env.JWT_EXPIRES_IN ||
+        "1d") as jwt.SignOptions["expiresIn"],
+    },
   );
 
   return {
@@ -108,10 +110,7 @@ export const loginUser = async (data: LoginInput) => {
     throw new Error("Invalid email or password");
   }
 
-  const isPasswordValid = await comparePassword(
-    password,
-    user.password
-  );
+  const isPasswordValid = await comparePassword(password, user.password);
 
   if (!isPasswordValid) {
     throw new Error("Invalid email or password");
@@ -131,8 +130,9 @@ export const loginUser = async (data: LoginInput) => {
     },
     process.env.JWT_SECRET as string,
     {
-      expiresIn: (process.env.JWT_EXPIRES_IN || "1d") as jwt.SignOptions["expiresIn"],
-    }
+      expiresIn: (process.env.JWT_EXPIRES_IN ||
+        "1d") as jwt.SignOptions["expiresIn"],
+    },
   );
 
   return {
@@ -151,5 +151,45 @@ export const loginUser = async (data: LoginInput) => {
     },
 
     role: membership.role,
+  };
+};
+
+export const registerInvitedUser = async (data: {
+  name: string;
+  email: string;
+  password: string;
+  token: string;
+}) => {
+  const result = await registerFromOrganizationInvitation({
+    token: data.token,
+    name: data.name,
+    email: data.email,
+    passwordHash: await hashPassword(data.password),
+  });
+  const token = jwt.sign(
+    {
+      userId: result.user.id,
+      organizationId: result.organization.id,
+      role: result.membership.role,
+    },
+    process.env.JWT_SECRET as string,
+    {
+      expiresIn: (process.env.JWT_EXPIRES_IN ||
+        "1d") as jwt.SignOptions["expiresIn"],
+    },
+  );
+  return {
+    token,
+    user: {
+      id: result.user.id,
+      name: result.user.name,
+      email: result.user.email,
+    },
+    organization: {
+      id: result.organization.id,
+      name: result.organization.name,
+      slug: result.organization.slug,
+    },
+    role: result.membership.role,
   };
 };

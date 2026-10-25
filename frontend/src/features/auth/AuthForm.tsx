@@ -1,18 +1,21 @@
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
-import { login, register } from "./auth.api";
+import { login, register, registerInvitation } from "./auth.api";
 import type { AuthSession } from "./auth.api";
 import { ApiError } from "../../services/api";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 export function AuthForm({
   onAuthenticated,
   mode,
+  invitationToken,
 }: {
   onAuthenticated: (session: AuthSession) => void;
   mode: "login" | "register";
+  invitationToken?: string;
 }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const activeRequest = useRef<AbortController | null>(null);
@@ -39,8 +42,12 @@ export function AuthForm({
     const organizationName = String(
       fields.get("organizationName") ?? "",
     ).trim();
-    if (registering && (!name || !organizationName)) {
-      setError("Enter your name and organization name.");
+    if (registering && (!name || (!invitationToken && !organizationName))) {
+      setError(
+        invitationToken
+          ? "Enter your name."
+          : "Enter your name and organization name.",
+      );
       return;
     }
     const controller = new AbortController();
@@ -49,10 +56,15 @@ export function AuthForm({
     setError("");
     try {
       const session = registering
-        ? await register(
-            { email, password, name, organizationName },
-            controller.signal,
-          )
+        ? invitationToken
+          ? await registerInvitation(
+              { email, password, name, token: invitationToken },
+              controller.signal,
+            )
+          : await register(
+              { email, password, name, organizationName },
+              controller.signal,
+            )
         : await login({ email, password }, controller.signal);
       if (!controller.signal.aborted) {
         form.reset();
@@ -91,7 +103,9 @@ export function AuthForm({
         </h2>
         <p>
           {registering
-            ? "Create an account and a new organization."
+            ? invitationToken
+              ? "Create your account inside the invited organization."
+              : "Create an account and a new organization."
             : "Sign in to your organization’s workspace."}
         </p>
         <form key={mode} onSubmit={submit} aria-busy={pending}>
@@ -109,14 +123,18 @@ export function AuthForm({
                   required
                   maxLength={100}
                 />
-                <label htmlFor="organizationName">Organization name</label>
-                <input
-                  id="organizationName"
-                  name="organizationName"
-                  autoComplete="organization"
-                  required
-                  maxLength={150}
-                />
+                {!invitationToken && (
+                  <>
+                    <label htmlFor="organizationName">Organization name</label>
+                    <input
+                      id="organizationName"
+                      name="organizationName"
+                      autoComplete="organization"
+                      required
+                      maxLength={150}
+                    />
+                  </>
+                )}
               </>
             )}
             <label htmlFor="email">Email address</label>
@@ -175,7 +193,9 @@ export function AuthForm({
             className="text-button"
             onClick={() => {
               setError("");
-              navigate(registering ? "/login" : "/register");
+              navigate(
+                `${registering ? "/login" : "/register"}${location.search}`,
+              );
             }}
           >
             {registering ? "Sign in" : "Create an account"}
