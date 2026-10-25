@@ -373,9 +373,9 @@ export function AcceptInvitationPage() {
             {result.role}.
           </p>
           <p>
-            Organization switching is added in Step 4.5. Until then, your
-            current workspace remains open.
+            Your membership is ready. Choose this team from the organization switcher.
           </p>
+          <Link to="/organizations/switch">Choose organization</Link>
         </>
       ) : (
         <>

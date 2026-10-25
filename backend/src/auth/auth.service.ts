@@ -3,6 +3,7 @@ import { comparePassword, hashPassword } from "./auth.utils";
 import { LoginInput, RegisterInput } from "./auth.types";
 import prisma from "../config/database";
 import { registerFromOrganizationInvitation } from "../organization/organization.service";
+import { OrganizationPermissionError } from "../organization/organization.service";
 
 export const registerUser = async (data: RegisterInput) => {
   const { name, email, password, organizationName } = data;
@@ -99,6 +100,7 @@ export const loginUser = async (data: LoginInput) => {
     },
     include: {
       memberships: {
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
         include: {
           organization: true,
         },
@@ -193,3 +195,30 @@ export const registerInvitedUser = async (data: {
     role: result.membership.role,
   };
 };
+
+export const listUserOrganizations = (userId: string) => prisma.organizationMember.findMany({
+  where: { userId },
+  select: { role: true, organization: { select: { id: true, name: true, slug: true } } },
+  orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+});
+
+export const switchUserOrganization = (userId: string, organizationId: string) =>
+  prisma.$transaction(async tx => {
+    // Use the same organization lock as membership changes. A concurrent removal
+    // or demotion must finish before the new session's role is decided.
+    await tx.$queryRaw`SELECT id FROM "Organization" WHERE id = ${organizationId} FOR UPDATE`;
+    const membership = await tx.organizationMember.findUnique({
+      where: { userId_organizationId: { userId, organizationId } },
+      include: {
+        user: { select: { id: true, name: true, email: true } },
+        organization: { select: { id: true, name: true, slug: true } },
+      },
+    });
+    // An unknown organization and a foreign organization have the same response.
+    if (!membership) throw new OrganizationPermissionError(404, "Organization membership not found");
+    const token = jwt.sign({ userId, organizationId, role: membership.role },
+      process.env.JWT_SECRET as string, {
+        expiresIn: (process.env.JWT_EXPIRES_IN || "1d") as jwt.SignOptions["expiresIn"],
+      });
+    return { token, user: membership.user, organization: membership.organization, role: membership.role };
+  });

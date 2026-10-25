@@ -122,6 +122,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [status, clear],
   );
 
+  async function switchOrganization(organizationId: string, signal: AbortSignal) {
+    const owner = current.current;
+    if (!owner) throw new ApiError("Please sign in to continue.", 401);
+    const candidate = await request<AuthSession>("/auth/switch-organization", {
+      method: "POST", body: { organizationId }, signal,
+    });
+    // A late switch must not overwrite a newer login, logout, or switch. Validate
+    // both account and target before replacing the in-memory session.
+    if (signal.aborted || current.current !== owner) throw new DOMException("Session changed", "AbortError");
+    if (!candidate || typeof candidate.token !== "string" || !candidate.token ||
+        candidate.user?.id !== owner.user.id || candidate.organization?.id !== organizationId ||
+        typeof candidate.user.name !== "string" || typeof candidate.user.email !== "string" ||
+        typeof candidate.organization.name !== "string" || typeof candidate.organization.slug !== "string" ||
+        !["OWNER", "ADMIN", "MEMBER"].includes(candidate.role))
+      throw new ApiError("Invalid organization session.", 200, "INVALID_SESSION");
+    signIn(candidate);
+  }
+
   return (
     <AuthContext.Provider
       value={{
@@ -130,6 +148,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         notice,
         signIn,
         signOut: () => clear(),
+        switchOrganization,
         retry: () => {
           if (current.current) void verify(current.current);
         },

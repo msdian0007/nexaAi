@@ -17,7 +17,8 @@
     "test:phase11-live": "npm run build && node --test tests/phase11.live.browser.test.cjs",
     "test:organization-permissions": "npm run build && node --test tests/organization.permissions.integration.test.cjs",
     "test:organization-profile": "npm run build && node --test tests/organization.profile.integration.test.cjs tests/organization.permissions.integration.test.cjs",
-    "test:organization-invitations": "npm run build && node --test tests/organization.invitations.integration.test.cjs tests/organization.profile.integration.test.cjs tests/organization.permissions.integration.test.cjs"
+    "test:organization-invitations": "npm run build && node --test tests/organization.invitations.integration.test.cjs tests/organization.profile.integration.test.cjs tests/organization.permissions.integration.test.cjs",
+    "test:organization-switch": "npm run build && node --test tests/organization.switch.integration.test.cjs tests/organization.invitations.integration.test.cjs tests/organization.profile.integration.test.cjs tests/organization.permissions.integration.test.cjs"
   },
   "keywords": [],
   "author": "",

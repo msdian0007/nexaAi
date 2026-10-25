@@ -15,6 +15,7 @@ import { DocumentsPage } from "./features/documents/DocumentsPage";
 import { ChatPage } from "./features/chat/ChatPage";
 import { OrganizationPage } from "./features/organization/OrganizationPage";
 import { MembersPage } from "./features/organization/MembersPage";
+import { SwitchOrganizationPage } from "./features/organization/SwitchOrganizationPage";
 import {
   InvitationsPage,
   AcceptInvitationPage,
@@ -100,7 +101,7 @@ function Dashboard() {
 }
 
 function AppRoutes() {
-  const { status, signOut } = useAuth();
+  const { status, signOut, session } = useAuth();
   return (
     <div className="app-shell">
       <header className="app-header">
@@ -127,6 +128,7 @@ function AppRoutes() {
                 <Link className="text-button" to="/organization">
                   Organization
                 </Link>
+                <Link className="text-button" to="/organizations/switch">Switch organization</Link>
               </>
             )}{" "}
             <button className="secondary-button" onClick={signOut}>
@@ -136,7 +138,9 @@ function AppRoutes() {
         )}
       </header>
       <main>
-        <Routes>
+        {/* Recreate every page on an organization change: drafts, selected chats,
+            upload results and pending request cleanup belong to the old workspace. */}
+        <Routes key={`${session?.user.id ?? "anonymous"}:${session?.organization.id ?? "none"}`}>
           <Route
             path="/"
             element={
@@ -154,6 +158,7 @@ function AppRoutes() {
           />
           <Route element={<ProtectedRoute />}>
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/organizations/switch" element={<SwitchOrganizationPage />} />
             <Route path="/documents" element={<DocumentsPage />} />
             <Route path="/organization" element={<OrganizationPage />} />
             <Route path="/organization/members" element={<MembersPage />} />

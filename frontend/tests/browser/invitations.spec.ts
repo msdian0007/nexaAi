@@ -177,7 +177,7 @@ test("acceptance preserves the link through sign-in and reports the new membersh
   await expect(page.getByRole("status")).toContainText(
     "joined Support Team as MEMBER",
   );
-  await expect(page.getByText(/switching is added in Step 4.5/)).toBeVisible();
+  await expect(page.getByRole("link", { name: "Choose organization" })).toBeVisible();
   expect(accepted).toBe(1);
 });
 

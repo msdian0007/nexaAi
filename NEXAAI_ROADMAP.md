@@ -4,14 +4,14 @@ Last updated: **2026-10-25**.
 
 ## START HERE: where we are
 
-**Current phase: returning to Phase 4 — Organization management.**
-**Last completed step: 4.4 — Invitations with expiry.**
-**Next implementation step: 4.5 — Organization switching.**
+**Current phase: Phase 4 complete; next is Phase 5 — Document management.**
+**Last completed step: 4.5 — Organization switching.**
+**Next implementation step: 5.1 — Paginated document library.**
 
-Step 4.4 adds one-time invitation links for existing or new accounts, binds each link
-to an email and role, and rejects expired, revoked, reused, or wrong-email acceptance.
-[Invitation flow and evidence](backend/docs/organization-step-4-invitations.md).
-Both builds, changed-file lint, 22 backend organization tests and all 43 browser tests passed.
+Step 4.5 lets a person choose a current membership, receive a session scoped to that
+organization and role, and open its dashboard with workspace page state reset.
+[Switching flow, example and evidence](backend/docs/organization-step-5-switching.md).
+Both builds, changed-file lint, 28 backend organization tests and all 48 browser tests passed.
 
 **Phase 11 is DONE for the verified local workflow.** A real Chrome journey passed:
 queued upload, separate worker, automatic status updates, failed-file retry, a cited
@@ -156,7 +156,7 @@ job is retained. It does not guarantee that processing can never run twice after
 **What exists today:** Redis + producer + worker + preparation/recovery + queued uploads
 and automatic status checks, with latest-upload retry controls.
 **What comes next:** return to unfinished organization, document-library, and chat features,
-continuing with organization switching in Step 4.5 after the invitation workflow.
+continuing with the document library in Step 5.1 after completing Phase 4.
 
 ## 3. How we will work from now on
 
@@ -195,7 +195,7 @@ flowchart TD
     H --> I[9 Chat screens - PARTIAL]
     I --> J[10 Saved conversation history]
     J --> K[11 Background processing - DONE locally]
-    K --> L[Finish Phase 4, 5, and 9 gaps - NEXT 4.5]
+    K --> L[Phase 4 DONE; finish Phase 5 and 9 gaps - NEXT 5.1]
     L --> M[12 AI agents]
     M --> N[13 Analytics dashboard]
     N --> O[14 Security and resource limits]
@@ -207,7 +207,7 @@ flowchart TD
 ```
 
 Text route: **1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 (done locally)
--> finish earlier gaps (current: 4.5) -> 12 -> 13 -> 14 -> 15 -> 16 -> 17 -> 18.**
+-> finish earlier gaps (current: 5.1) -> 12 -> 13 -> 14 -> 15 -> 16 -> 17 -> 18.**
 
 Some work was implemented in a different chronological order. We keep the original
 phase identities and explicitly return to unfinished features instead of hiding them.
@@ -220,7 +220,7 @@ Future steps are a working plan; explain and record changes before implementing 
 | 1 Foundation | DONE for local core | React, Express, TypeScript, Prisma, PostgreSQL/pgvector, health API. | Full app containers are Phase 17. |
 | 2 Authentication and isolation | DONE for core flow | Register, password login, signed tokens, organization membership and scoped document/chat access. | Broader security review remains in Phase 14. |
 | 3 Authentication screens | DONE for core flow | Login/register, protected navigation, sign out, safe request handling. | Refresh currently requires login again; production session design is Phase 14. |
-| 4 Organization management | PARTIAL | Member permissions verified in 4.1; profile API/screen with owner-only name editing added in 4.2. | Member-management screens, invitations, organization switching. |
+| 4 Organization management | DONE for planned local flow | Current-role permissions, profile editing, member screens, expiring invitations and organization switching. | Email delivery is manual; persistent sessions and global token revocation remain later work. |
 | 5 Document management | PARTIAL | PDF/DOCX/TXT upload, local storage, background processing status, latest-upload retry UI. | Full document list, deletion and library retry controls; cloud storage is Phase 18. |
 | 6 Document processing | DONE for core flow | Extract text and split it into chunks; invoked by the worker and verified in the live 11.6 journey. | Broader document-format evaluation remains in Phase 16. |
 | 7 Embeddings and search | DONE for core flow | Local embeddings, stored vectors, organization-scoped similarity search. | More retrieval evaluation remains in Phase 16. |
@@ -236,8 +236,8 @@ Future steps are a working plan; explain and record changes before implementing 
 | 4.2 DONE | Current members view their profile; owners edit the display name; the current browser session reflects confirmed changes. | Both builds, lint, 16 backend and 32 browser tests passed. [Guide](backend/docs/organization-step-2-profile.md). |
 | 4.3 DONE | Member screens with fresh role checks, registered-account addition, role changes and removal confirmation. | Owner protection, restricted roles, cancellation, stale access and response isolation tested. [Guide](backend/docs/organization-step-3-members.md). |
 | 4.4 DONE | Add one-time, email-bound invitation creation, revocation, registration and acceptance, with expiry. | 22 backend organization tests and invitation browser flows passed. Email delivery remains manual. [Guide](backend/docs/organization-step-4-invitations.md). |
-| 4.5 NEXT | Add organization switching. | A member of two organizations switches context and sees only the selected organization's data. |
-| 5.1 | Add a paginated document library. | Earlier uploads remain visible with their latest status. |
+| 4.5 DONE | List current memberships, issue a scoped session for the selected team, verify its current role and reset workspace pages. | Real database document/history isolation and browser session/draft checks passed. [Guide](backend/docs/organization-step-5-switching.md). |
+| 5.1 NEXT | Add a paginated document library. | Earlier uploads remain visible with their latest status. |
 | 5.2 | Add document deletion coordinated with active jobs, files, and chunks. | A deleted document cannot be retrieved for new answers; saved citation metadata is preserved. |
 | 5.3 | Extend Phase 11's latest-upload retry controls to the document library. | Older failed documents can be retried without duplicate processing, and status stays accurate. |
 | 9.1 | Add private conversation deletion. | Delete your own conversation; another user's conversation remains inaccessible. |
@@ -257,7 +257,7 @@ flowchart LR
     C --> D[11.4 Recovery - DONE]
     D --> E[11.5 Upload and UI integration - DONE]
     E --> F[11.6 End-to-end validation - DONE]
-    F --> G[4.1 through 4.4 - DONE; 4.5 Organization switching - NEXT]
+    F --> G[Phase 4 DONE; 5.1 Document library - NEXT]
     style G fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
 ```
 
@@ -411,6 +411,7 @@ Useful existing evidence:
 - [4.2 Organization profile API, screen, and validation](backend/docs/organization-step-2-profile.md)
 - [4.3 Member-management screen, examples, and confirmation flow](backend/docs/organization-step-3-members.md)
 - [4.4 Expiring invitation flow, security model, and examples](backend/docs/organization-step-4-invitations.md)
+- [4.5 Organization switching, scoped sessions, and workspace isolation](backend/docs/organization-step-5-switching.md)
 
 Before advancing a step, check:
 
@@ -421,5 +422,5 @@ Before advancing a step, check:
 - [ ] Any remaining limitation is visible here.
 - [ ] The tracker has been updated and I know the next step.
 
-**Next lesson: 4.5 — let a person with multiple memberships choose which organization
-is active, issue a correctly scoped session, and keep every screen tenant-isolated.**
+**Next lesson: 5.1 — show earlier uploaded documents in a paginated library with their
+latest processing status, scoped to the selected organization.**

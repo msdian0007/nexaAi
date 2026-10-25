@@ -8,6 +8,7 @@ export interface AuthState {
   notice: string;
   signIn: (session: AuthSession) => void;
   signOut: () => void;
+  switchOrganization: (organizationId: string, signal: AbortSignal) => Promise<void>;
   updateOrganization: (organization: AuthSession["organization"]) => void;
   retry: () => void;
   request: <T>(
