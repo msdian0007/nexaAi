@@ -235,6 +235,13 @@ dd {
 .document-name {
   overflow-wrap: anywhere;
 }
+.document-library {
+  margin-top: 36px;
+}
+.document-card {
+  margin-top: 20px;
+  overflow-wrap: anywhere;
+}
 .app-header nav {
   display: flex;
   align-items: center;

@@ -119,6 +119,7 @@ model Document {
   @@index([organizationId])
   @@index([uploadedById])
   @@index([organizationId, status])
+  @@index([organizationId, createdAt, id])
 }
 
 model DocumentChunk {

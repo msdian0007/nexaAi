@@ -2,6 +2,9 @@ import { test, expect } from '@playwright/test';
 
 const document = { id: 'doc-1', originalName: 'policy.txt', status: 'COMPLETED', updatedAt: '2026-10-05T09:00:00Z', errorMessage: null };
 test.beforeEach(async ({ page }) => {
+  await page.route('**/api/v1/documents?*', route => route.fulfill({ json: { success: true, data: {
+    organizationId: 'o', documents: [], page: { limit: 10, hasMore: false, nextCursor: null },
+  } } }));
   await page.route('**/api/v1/auth/login', route => route.fulfill({ json: { success: true, data: {
     token: 'test-token', user: { id: 'u', name: 'Asha', email: 'asha@example.invalid' },
     organization: { id: 'o', name: 'Sample Team', slug: 'sample-team' }, role: 'OWNER',

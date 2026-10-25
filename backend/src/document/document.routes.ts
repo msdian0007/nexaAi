@@ -4,10 +4,11 @@ import path from "path";
 import fs from "fs";
 
 import { authenticate } from "../auth/auth.middleware";
-import { documentStatus, reprocessDocument, uploadDocument } from "./document.controller";
+import { documentLibrary, documentStatus, reprocessDocument, uploadDocument } from "./document.controller";
 import { searchDocuments } from "./document.search.controller";
 
 const router = express.Router();
+router.get("/", authenticate, documentLibrary);
 
 router.post("/search", authenticate, searchDocuments);
 
