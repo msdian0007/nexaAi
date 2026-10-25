@@ -6,6 +6,24 @@ export class ConversationMembershipError extends Error {}
 type Answer = Awaited<ReturnType<typeof answerDocumentQuestion>>;
 type Owner = { organizationId: string; userId: string };
 
+export async function deleteOwnedConversation(owner: Owner, conversationId: string) {
+  return prisma.$transaction(async tx => {
+    // Use the same membership lock order as saveExchange. No provider request
+    // runs inside this transaction. Membership removal cannot race this decision.
+    const membership = await tx.$queryRaw<Array<{ id: string }>>`
+      SELECT "id" FROM "OrganizationMember"
+      WHERE "userId" = ${owner.userId} AND "organizationId" = ${owner.organizationId}
+      FOR KEY SHARE`;
+    if (!membership.length) throw new ConversationMembershipError();
+    // DELETE takes the parent row lock used by saves. Either a save finishes
+    // first and its messages are deleted, or the save finds no parent and fails.
+    // Cascades remove messages and source snapshots in this same transaction.
+    const removed = await tx.conversation.deleteMany({ where: { id: conversationId, ...owner } });
+    if (!removed.count) throw new ConversationNotFoundError();
+    return { conversationId, deleted: true };
+  });
+}
+
 // Check ownership before retrieval or a provider call. Inaccessible and missing
 // conversations deliberately have the same response, avoiding history disclosure.
 async function checkAccess(owner: Owner, conversationId?: string) {

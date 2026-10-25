@@ -325,6 +325,9 @@ dd {
 .conversation-list {
   min-width: 0;
 }
+.conversation-delete { max-width: 100%; overflow-wrap: anywhere; text-align: left; margin-bottom: 12px; }
+.conversation-list .upload-panel { padding: 14px; overflow-wrap: anywhere; }
+.conversation-list .primary-button { white-space: normal; overflow-wrap: anywhere; }
 .conversation-list ul {
   list-style: none;
   padding: 0;

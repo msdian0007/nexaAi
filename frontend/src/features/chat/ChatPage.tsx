@@ -333,8 +333,16 @@ export function ChatPage() {
       </button>
       <div className="history-layout">
         <ConversationList
-          key={listVersion}
+          revision={listVersion}
           selected={highlighted}
+          onDeleting={(id) => {
+            if (highlighted === id) {
+              // Recreate the composer to clear the deleted chat's draft/messages
+              // and abort its pending history and generation requests.
+              setSelection({ key: crypto.randomUUID() });
+              setHighlighted(undefined);
+            }
+          }}
           onSelect={(id) => {
             setSelection({ key: id, id });
             setHighlighted(id);
