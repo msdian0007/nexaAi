@@ -6,6 +6,7 @@ import { test as base, expect } from "@playwright/test";
 // keep importing Playwright directly and use their actual isolated API instead.
 export const test = base.extend({
   page: async ({ page }, providePage) => {
+    await page.route("**/api/v1/auth/logout", route => route.fulfill({ json: { success: true, data: { signedOut: true } } }));
     await page.route("**/api/v1/analytics/summary?*", (route) => {
       const params = new URL(route.request().url()).searchParams;
       const from = params.get("from")!,

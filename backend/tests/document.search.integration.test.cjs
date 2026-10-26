@@ -105,7 +105,7 @@ test("ranks real semantic matches and excludes other tenants and incomplete cont
 
 test("an organization with no indexed documents receives an empty list", async () => {
   const empty = await createTenant();
-  const emptyToken = jwt.sign({ userId: empty, organizationId: empty, role: "MEMBER" }, process.env.JWT_SECRET);
+  const emptyToken = jwt.sign({ userId: empty, organizationId: empty, role: "MEMBER" }, process.env.JWT_SECRET, { expiresIn: '5m' });
   const response = await search({ query: question }, emptyToken);
   assert.equal(response.status, 200);
   assert.deepEqual(response.body.data.results, []);

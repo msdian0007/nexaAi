@@ -4,6 +4,8 @@ export type Role = "OWNER" | "ADMIN" | "MEMBER";
 
 export interface AuthSession {
   token: string;
+  // Server-supplied expiry; optional for compatibility with an older API rollout.
+  expiresAt?: string;
   user: { id: string; name: string; email: string };
   organization: { id: string; name: string; slug: string };
   role: Role;
@@ -21,6 +23,7 @@ export interface AuthIdentity {
   userId: string;
   organizationId: string;
   role: Role;
+  expiresAt?: string;
 }
 
 export const login = (input: LoginInput, signal?: AbortSignal) =>

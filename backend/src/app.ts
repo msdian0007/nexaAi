@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import prisma from "./config/database";
-import authRoutes from "./auth/auth.routes";
+import authRoutes, { authJsonError } from "./auth/auth.routes";
 import protectedRoutes from "./auth/auth.protected.route";
 import organizationRoutes from "./organization/organization.routes";
 import documentRoutes from "./document/document.routes";
@@ -22,6 +22,7 @@ app.use(cors());
 
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/auth", protectedRoutes);
+app.use("/api/v1/auth", authJsonError);
 app.use("/api/v1/organizations", organizationRoutes);
 app.use("/api/v1/documents", documentRoutes);
 app.use("/api/v1/chat", ragRoutes);

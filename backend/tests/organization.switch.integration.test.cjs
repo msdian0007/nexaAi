@@ -83,7 +83,7 @@ test('organization switching issues a session for a current membership only', { 
       assert.equal((await call('/auth/switch-organization', 'POST', { organizationId: organizations[1] })).body.data.role, 'ADMIN');
       await prisma.organizationMember.delete({ where: { id: target.id } });
       assert.equal((await call('/auth/switch-organization', 'POST', { organizationId: organizations[1] })).status, 404);
-      assert.equal((await call('/auth/me', 'GET', undefined, newToken)).status, 401);
+      assert.equal((await call('/auth/me', 'GET', undefined, newToken)).status, 403);
       assert.equal((await call('/organizations/profile', 'GET', undefined, newToken)).status, 403);
       // A valid account token can still choose another current membership.
       assert.equal((await call('/auth/switch-organization', 'POST', { organizationId: organizations[0] }, newToken)).status, 200);

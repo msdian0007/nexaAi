@@ -30,7 +30,7 @@ test('organization profile is scoped and only current owners can rename it', asy
     server = app.listen(0, '127.0.0.1'); await once(server, 'listening');
     async function call(person = ids[0], method = 'GET', body, organizationId = org) {
       // Deliberately claim OWNER for everyone; database role must override this.
-      const token = person ? jwt.sign({ userId: person.id, organizationId, role: 'OWNER' }, process.env.JWT_SECRET) : null;
+      const token = person ? jwt.sign({ userId: person.id, organizationId, role: 'OWNER' }, process.env.JWT_SECRET, { expiresIn: '5m' }) : null;
       const response = await fetch(`http://127.0.0.1:${server.address().port}/organizations/profile`, {
         method, headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(10000),

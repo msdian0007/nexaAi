@@ -10,7 +10,7 @@ const router = require('../dist/src/rag/rag.routes').default;
 const tenants = [], extraUsers = [];
 const originalSecret = process.env.JWT_SECRET;
 let own, other, peer, empty, conversations, peerChat, otherChat, server, url;
-const sign = (userId, organizationId = userId) => jwt.sign({ userId, organizationId, role: 'MEMBER' }, process.env.JWT_SECRET);
+const sign = (userId, organizationId = userId) => jwt.sign({ userId, organizationId, role: 'MEMBER' }, process.env.JWT_SECRET, { expiresIn: '5m' });
 const cursor = value => Buffer.from(JSON.stringify(value)).toString('base64url');
 async function tenant() {
   const id = randomUUID();

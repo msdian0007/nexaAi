@@ -1,4 +1,4 @@
-import jwt from "jsonwebtoken";
+import { issueAuthToken } from "./auth.tokens";
 import { comparePassword, hashPassword } from "./auth.utils";
 import { LoginInput, RegisterInput } from "./auth.types";
 import prisma from "../config/database";
@@ -60,21 +60,14 @@ export const registerUser = async (data: RegisterInput) => {
   });
 
   // Generate JWT
-  const token = jwt.sign(
-    {
-      userId: result.user.id,
-      organizationId: result.organization.id,
-      role: result.membership.role,
-    },
-    process.env.JWT_SECRET as string,
-    {
-      expiresIn: (process.env.JWT_EXPIRES_IN ||
-        "1d") as jwt.SignOptions["expiresIn"],
-    },
-  );
+  const credentials = issueAuthToken({
+    userId: result.user.id,
+    organizationId: result.organization.id,
+    role: result.membership.role,
+  });
 
   return {
-    token,
+    ...credentials,
     user: {
       id: result.user.id,
       name: result.user.name,
@@ -124,21 +117,14 @@ export const loginUser = async (data: LoginInput) => {
     throw new Error("User is not associated with any organization");
   }
 
-  const token = jwt.sign(
-    {
-      userId: user.id,
-      organizationId: membership.organizationId,
-      role: membership.role,
-    },
-    process.env.JWT_SECRET as string,
-    {
-      expiresIn: (process.env.JWT_EXPIRES_IN ||
-        "1d") as jwt.SignOptions["expiresIn"],
-    },
-  );
+  const credentials = issueAuthToken({
+    userId: user.id,
+    organizationId: membership.organizationId,
+    role: membership.role,
+  });
 
   return {
-    token,
+    ...credentials,
 
     user: {
       id: user.id,
@@ -168,20 +154,13 @@ export const registerInvitedUser = async (data: {
     email: data.email,
     passwordHash: await hashPassword(data.password),
   });
-  const token = jwt.sign(
-    {
-      userId: result.user.id,
-      organizationId: result.organization.id,
-      role: result.membership.role,
-    },
-    process.env.JWT_SECRET as string,
-    {
-      expiresIn: (process.env.JWT_EXPIRES_IN ||
-        "1d") as jwt.SignOptions["expiresIn"],
-    },
-  );
+  const credentials = issueAuthToken({
+    userId: result.user.id,
+    organizationId: result.organization.id,
+    role: result.membership.role,
+  });
   return {
-    token,
+    ...credentials,
     user: {
       id: result.user.id,
       name: result.user.name,
@@ -216,9 +195,6 @@ export const switchUserOrganization = (userId: string, organizationId: string) =
     });
     // An unknown organization and a foreign organization have the same response.
     if (!membership) throw new OrganizationPermissionError(404, "Organization membership not found");
-    const token = jwt.sign({ userId, organizationId, role: membership.role },
-      process.env.JWT_SECRET as string, {
-        expiresIn: (process.env.JWT_EXPIRES_IN || "1d") as jwt.SignOptions["expiresIn"],
-      });
-    return { token, user: membership.user, organization: membership.organization, role: membership.role };
+    const credentials = issueAuthToken({ userId, organizationId, role: membership.role });
+    return { ...credentials, user: membership.user, organization: membership.organization, role: membership.role };
   });

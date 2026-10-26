@@ -92,10 +92,17 @@ test('real dashboard matches retained fixtures, UTC dates, refreshed writes and 
 });
 
 test('real logins keep teammate activity private and switching replaces organization counts', async ({ page, fixture: f }) => {
-  await login(page, f);
+  const ownerToken = await login(page, f);
   await dates(page, f.from, f.through);
   await numbers(page, ['4', '2', '4']);
+  const signedOut = page.waitForResponse(r => r.url().endsWith('/auth/logout') && r.status() === 200);
   await page.getByRole('button', { name: 'Sign out' }).click();
+  expect((await (await signedOut).json()).data).toEqual({ signedOut: true });
+  // A browser logout must invalidate replay at the actual API, not merely hide
+  // the page. Another fresh password login remains possible afterward.
+  const replay = await page.request.get(`${f.baseUrl}/auth/me`, { headers: { Authorization: `Bearer ${ownerToken}` } });
+  expect(replay.status()).toBe(401);
+  expect((await replay.json()).code).toBe('SESSION_REVOKED');
   await login(page, f, true);
   await dates(page, f.from, f.through);
   await numbers(page, ['4', '3', '7']);

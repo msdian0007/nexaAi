@@ -71,6 +71,7 @@ function AppRoutes() {
         </Link>
         {status !== "anonymous" && (
           <nav aria-label="Workspace">
+            {status === "restricted" && <Link className="text-button" to="/organizations/switch">Switch organization</Link>}
             {status === "authenticated" && (
               <>
                 <Link className="text-button" to="/dashboard">

@@ -10,6 +10,22 @@ import { listUserOrganizations, switchUserOrganization } from "./auth.service";
 import { OrganizationPermissionError } from "../organization/organization.service";
 
 const router = Router();
+router.post("/logout", authenticate, async (req: AuthenticatedRequest, res) => {
+  if (Object.keys(req.query).length || (req.body !== undefined &&
+    (!req.body || typeof req.body !== "object" || Array.isArray(req.body) || Object.keys(req.body).length)))
+    return res.status(400).json({ success: false, message: "Sign out does not accept request fields." });
+  try {
+    // Upsert makes concurrent sign-out submissions safe. Never store the token
+    // itself, and revoke only the authenticated credential, not another session.
+    await prisma.revokedToken.upsert({
+      where: { tokenHash: req.auth!.tokenHash }, update: {},
+      create: { tokenHash: req.auth!.tokenHash, expiresAt: req.auth!.expiresAt, userId: req.user!.userId },
+    });
+    return res.json({ success: true, data: { signedOut: true } });
+  } catch {
+    return res.status(503).json({ success: false, message: "Server sign-out could not be confirmed." });
+  }
+});
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function actorId(req: AuthenticatedRequest) {
@@ -52,7 +68,8 @@ router.get(
       const membership = await prisma.organizationMember.findUnique({
         where: { userId_organizationId: { userId, organizationId } }, select: { role: true },
       });
-      if (!membership) throw new OrganizationPermissionError(401, "Current membership is required");
+      if (!membership) return res.status(403).json({ success: false,
+        code: "ORGANIZATION_ACCESS_REVOKED", message: "Current membership is required." });
     return res.status(200).json({
       success: true,
       message: "Authenticated user",
@@ -60,6 +77,7 @@ router.get(
         userId: req.user?.userId,
         organizationId: req.user?.organizationId,
         role: membership.role,
+        expiresAt: req.auth!.expiresAt.toISOString(),
       },
     });
     } catch (error) { return failure(res, error); }

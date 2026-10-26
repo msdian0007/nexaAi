@@ -124,7 +124,7 @@ test('scheduled retries override FAILED and queue outages never falsely report a
 });
 
 test("another tenant sees the same 404 as a missing document, even with an organization query override", async () => {
-  const otherTenantToken = jwt.sign({ userId: randomUUID(), organizationId: randomUUID(), role: "OWNER" }, process.env.JWT_SECRET);
+  const otherTenantToken = jwt.sign({ userId: randomUUID(), organizationId: randomUUID(), role: "OWNER" }, process.env.JWT_SECRET, { expiresIn: '5m' });
   const inaccessible = await getStatus(document.id, otherTenantToken, `?organizationId=${ownerId}`);
   const missing = await getStatus(randomUUID());
   assert.equal(inaccessible.status, 404);
@@ -146,7 +146,7 @@ test("rejects a signed token without an organization instead of making an unscop
   const missingContext = jwt.sign({ userId: ownerId, role: "MEMBER" }, process.env.JWT_SECRET);
   const response = await getStatus(document.id, missingContext);
   assert.equal(response.status, 401);
-  assert.equal(response.body.message, "Organization context is missing");
+  assert.equal(response.body.code, "INVALID_SESSION");
 });
 
 test("rejects a blank document ID", async () => {

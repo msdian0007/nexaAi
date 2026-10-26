@@ -146,7 +146,7 @@ test('dashboard summary privacy, metric accuracy, HTTP and database guarantees',
       await prisma.organizationMember.delete({ where: { userId_organizationId: actor } });
       let aggregates = 0;
       await intercept(async () => { aggregates++; throw new Error('unexpected aggregate'); }, async () => {
-        const stale = jwt.sign({ ...actor, role: 'OWNER' }, process.env.JWT_SECRET);
+        const stale = jwt.sign({ ...actor, role: 'OWNER' }, process.env.JWT_SECRET, { expiresIn: '5m' });
         assert.equal((await http('', stale)).status, 403);
       });
       assert.equal(aggregates, 0);

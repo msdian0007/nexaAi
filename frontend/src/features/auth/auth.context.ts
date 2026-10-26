@@ -4,7 +4,7 @@ import type { RequestOptions } from "../../services/api";
 
 export interface AuthState {
   session: AuthSession | null;
-  status: "anonymous" | "checking" | "authenticated" | "unavailable";
+  status: "anonymous" | "checking" | "authenticated" | "unavailable" | "restricted";
   notice: string;
   signIn: (session: AuthSession) => void;
   signOut: () => void;
