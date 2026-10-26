@@ -7,6 +7,7 @@ import organizationRoutes from "./organization/organization.routes";
 import documentRoutes from "./document/document.routes";
 import ragRoutes from "./rag/rag.routes";
 import agentRoutes, { agentJsonError } from "./agents/agent.routes";
+import dashboardRoutes, { dashboardJsonError } from "./analytics/dashboard.routes";
 import {
   getDocumentQueue,
   closeDocumentQueue,
@@ -26,6 +27,8 @@ app.use("/api/v1/documents", documentRoutes);
 app.use("/api/v1/chat", ragRoutes);
 app.use("/api/v1/agents", agentRoutes);
 app.use("/api/v1/agents", agentJsonError);
+app.use("/api/v1/analytics", dashboardRoutes);
+app.use("/api/v1/analytics", dashboardJsonError);
 
 app.get("/api/v1/health", async (_req, res) => {
   try {

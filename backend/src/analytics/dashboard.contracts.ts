@@ -1,7 +1,7 @@
 import type { DocumentCountsResult } from "../agents/agent.contracts";
 
-// Contract only in 13.1. The summary API and its database permissions arrive in
-// 13.2; this module neither queries data nor grants access to an organization.
+// Shared date/response contract; this module neither queries data nor grants
+// access. The summary service enforces current database membership separately.
 export const DASHBOARD_MAX_DAYS = 90;
 export const DASHBOARD_DEFAULT_DAYS = 7;
 const DAY_MS = 24 * 60 * 60 * 1000;
