@@ -5,15 +5,15 @@ Last updated: **2026-10-26**.
 ## START HERE: where we are
 
 **Current phase: Phase 12 — AI agents.**
-**Last completed step: 12.2 — Connect the knowledge-answer tool.**
-**Next implementation step: 12.3 — Add organization document counts.**
+**Last completed step: 12.3 — Add organization document counts.**
+**Next implementation step: 12.4 — Select a tool or ask for clarification.**
 
-Step 12.2 connects the knowledge executor to existing organization-scoped RAG.
-It checks current membership before retrieval and again before returning the validated
-answer and citations. Search settings belong to the server; no private history is saved.
-[Knowledge tool flow and examples](backend/docs/agent-step-2-knowledge-tool.md).
-The backend build and all 21 contract/integration tests passed using real PostgreSQL
-and controlled embeddings/provider output. No agent endpoint is enabled yet.
+Step 12.3 counts the signed organization's saved documents by database processing
+status, excluding pending deletions. Membership and counts share a read-only snapshot
+with a timeout. No model-supplied SQL or individual records enter the result.
+[Count flow, examples, and saved-status explanation](backend/docs/agent-step-3-document-counts.md).
+The backend build and all 32 agent tests passed, including real PostgreSQL snapshot,
+write-rejection and timeout tests. No agent endpoint is enabled yet.
 
 **Phase 11 is DONE for the verified local workflow.** A real Chrome journey passed:
 queued upload, separate worker, automatic status updates, failed-file retry, a cited
@@ -159,8 +159,8 @@ job is retained. It does not guarantee that processing can never run twice after
 
 **What exists today:** Redis + producer + worker + preparation/recovery + queued uploads
 and automatic status checks, with latest-upload retry controls.
-**What comes next:** Phase 12.3 adds the document-count executor, using a bounded,
-read-only query scoped to the authenticated organization and its current membership.
+**What comes next:** Phase 12.4 chooses an available tool for a request, or asks for
+clarification. The existing knowledge and count executors enforce their own boundaries.
 
 ## 3. How we will work from now on
 
@@ -200,7 +200,7 @@ flowchart TD
     I --> J[10 Saved conversation history]
     J --> K[11 Background processing - DONE locally]
     K --> L[Earlier gaps in Phases 4, 5 and 9 - DONE locally]
-    L --> M[12 AI agents - 12.2 DONE; NEXT 12.3 document counts]
+    L --> M[12 AI agents - 12.3 DONE; NEXT 12.4 tool selection]
     M --> N[13 Analytics dashboard]
     N --> O[14 Security and resource limits]
     O --> P[15 Monitoring and audit history]
@@ -211,7 +211,7 @@ flowchart TD
 ```
 
 Text route: **1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 (done locally)
--> earlier gaps complete -> 12 (12.2 done; next: 12.3) -> 13 -> 14 -> 15 -> 16 -> 17 -> 18.**
+-> earlier gaps complete -> 12 (12.3 done; next: 12.4) -> 13 -> 14 -> 15 -> 16 -> 17 -> 18.**
 
 Some work was implemented in a different chronological order. We keep the original
 phase identities and explicitly return to unfinished features instead of hiding them.
@@ -261,7 +261,7 @@ flowchart LR
     C --> D[11.4 Recovery - DONE]
     D --> E[11.5 Upload and UI integration - DONE]
     E --> F[11.6 End-to-end validation - DONE]
-    F --> G[Phases 4, 5 and 9 DONE; 12.2 DONE; NEXT 12.3 document counts]
+    F --> G[Phases 4, 5 and 9 DONE; 12.3 DONE; NEXT 12.4 tool selection]
     style G fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
 ```
 
@@ -305,17 +305,17 @@ The model cannot submit arbitrary SQL or choose the signed user's organization.
 ```mermaid
 flowchart LR
     A[12.1 Contracts and parser - DONE] --> B[12.2 Knowledge tool - DONE]
-    B --> C[12.3 Document counts - NEXT]
-    C --> D[12.4 Tool choice or clarification]
+    B --> C[12.3 Document counts - DONE]
+    C --> D[12.4 Tool choice or clarification - NEXT]
     D --> E[12.5 Confirmed document retry]
     E --> F[12.6 UI, execution records and integration checks]
-    style C fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
+    style D fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
 ```
 
 - [x] **12.1 DONE** Define exact tool inputs/outputs and permission requirements; implement strict tool-call validation. Backend build and 11 contract tests passed. [Guide](backend/docs/agent-step-1-tool-contracts.md). These tests validate shapes and declared policy, not executor authorization.
 - [x] **12.2 DONE** Connect the knowledge executor to existing RAG with current membership checks before retrieval and after generation, strict inputs and server-owned settings. Backend build and 21 contract/integration tests passed, including real scoped vector retrieval and revoked access. [Guide](backend/docs/agent-step-2-knowledge-tool.md). Agent routing/UI remain later steps.
-- [ ] **12.3 NEXT** Add the read-only document-count tool with scoped queries, fixed output size, and a timeout.
-- [ ] **12.4** Add routing that selects a tool or asks for clarification.
+- [x] **12.3 DONE** Add document counts with current membership and a scoped aggregate in one read-only snapshot, zero-filled status totals and database/transaction timeouts. Backend build and 32 agent tests passed, including real write rejection, slow-query cancellation and concurrent-insert consistency. [Guide](backend/docs/agent-step-3-document-counts.md). Counts describe saved database status, not live Redis state.
+- [ ] **12.4 NEXT** Add routing that selects an available tool or asks for clarification.
 - [ ] **12.5** Add one-document retry proposals, separate bound confirmation, expiry, fresh permission/state checks, and duplicate protection.
 - [ ] **12.6** Add UI/results, execution records, and tests for disallowed tool calls.
 
@@ -438,6 +438,7 @@ Useful existing evidence:
 - [9.2 Safe Markdown, formatting examples, URL restrictions and browser verification](frontend/docs/chat-step-2-safe-markdown.md)
 - [12.1 Agent tool contracts, permissions, confirmation requirements and validation](backend/docs/agent-step-1-tool-contracts.md)
 - [12.2 Knowledge executor, current access checks, scoped retrieval and citation verification](backend/docs/agent-step-2-knowledge-tool.md)
+- [12.3 Document counts, read-only snapshots, saved statuses and timeout verification](backend/docs/agent-step-3-document-counts.md)
 
 Before advancing a step, check:
 
@@ -448,5 +449,5 @@ Before advancing a step, check:
 - [ ] Any remaining limitation is visible here.
 - [ ] The tracker has been updated and I know the next step.
 
-**Next lesson: 12.3 — count the signed organization's saved documents by database
-processing status, with current membership checks and a bounded read-only query.**
+**Next lesson: 12.4 — route a request to the knowledge or document-count tool, or ask
+for clarification when the request does not fit an available operation.**

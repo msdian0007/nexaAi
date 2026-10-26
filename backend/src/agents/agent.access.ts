@@ -36,10 +36,12 @@ export function readAgentContext(value: unknown): AgentContext {
 
 export async function requireAgentMembership(
   context: AgentContext,
+  client: Pick<typeof prisma, "organizationMember"> = prisma,
 ): Promise<void> {
   // Every current role can read shared knowledge. A token's old role or a model's
   // role assertion is not used to establish current membership.
-  const member = await prisma.organizationMember.findUnique({
+  // A read tool can pass its transaction so membership and data share a snapshot.
+  const member = await client.organizationMember.findUnique({
     where: { userId_organizationId: context },
     select: { id: true },
   });
