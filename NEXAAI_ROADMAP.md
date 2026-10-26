@@ -4,16 +4,15 @@ Last updated: **2026-10-26**.
 
 ## START HERE: where we are
 
-**Current phase: Phase 12 complete for the documented local flow; next is Phase 13 — analytics.**
-**Last completed step: 12.6 — Connect agent HTTP/UI, execution records, and integration checks.**
-**Next implementation step: 13.1 — Define dashboard metrics and their supporting data.**
+**Current phase: Phase 13 — dashboard and analytics.**
+**Last completed step: 13.1 — Define dashboard metrics and their supporting data.**
+**Next implementation step: 13.2 — Implement the scoped dashboard summary API.**
 
-Step 12.6 adds the Agent screen, authenticated endpoints, private metadata-only
-execution records, typed results, and separate proposal confirmation/cancellation.
-[Screen/API flow, manual walkthrough, and verification](backend/docs/agent-step-6-api-ui-verification.md).
-The migration, both builds, changed-file lint, Prisma validation, 100 backend tests
-and 37 distinct browser tests passed. The integrated Chrome journey used real auth,
-PostgreSQL and Redis with controlled provider output; live intent accuracy remains unverified.
+Step 13.1 defines shared current document counts and your private retained activity,
+with explicit timestamp/deletion rules, paired UTC dates, and a bounded response contract.
+[Metric definitions, worked example, and flow](backend/docs/analytics-step-1-metric-definitions.md).
+The backend build and all 10 date/contract tests passed. No summary endpoint or new
+dashboard screen is enabled yet; database counting/permission tests belong to 13.2.
 
 **Phase 11 is DONE for the verified local workflow.** A real Chrome journey passed:
 queued upload, separate worker, automatic status updates, failed-file retry, a cited
@@ -159,8 +158,8 @@ job is retained. It does not guarantee that processing can never run twice after
 
 **What exists today:** Redis + producer + worker + preparation/recovery + queued uploads
 and automatic status checks, with latest-upload retry controls.
-**What comes next:** Phase 13.1 defines useful dashboard numbers, their exact meaning,
-organization permissions, and which saved records can support each metric.
+**What comes next:** Phase 13.2 implements the summary API with current membership,
+organization-scoped documents, private user activity, and one consistent read snapshot.
 
 ## 3. How we will work from now on
 
@@ -201,7 +200,7 @@ flowchart TD
     J --> K[11 Background processing - DONE locally]
     K --> L[Earlier gaps in Phases 4, 5 and 9 - DONE locally]
     L --> M[12 AI agents - DONE for documented local flow]
-    M --> N[13 Analytics dashboard - NEXT 13.1 metric definitions]
+    M --> N[13 Analytics dashboard - 13.1 DONE; NEXT 13.2 summary API]
     N --> O[14 Security and resource limits]
     O --> P[15 Monitoring and audit history]
     P --> Q[16 Full-system testing]
@@ -211,7 +210,7 @@ flowchart TD
 ```
 
 Text route: **1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 (done locally)
--> earlier gaps complete -> 12 (done for local flow) -> 13 (next: 13.1) -> 14 -> 15 -> 16 -> 17 -> 18.**
+-> earlier gaps complete -> 12 (done for local flow) -> 13 (13.1 done; next: 13.2) -> 14 -> 15 -> 16 -> 17 -> 18.**
 
 Some work was implemented in a different chronological order. We keep the original
 phase identities and explicitly return to unfinished features instead of hiding them.
@@ -261,7 +260,7 @@ flowchart LR
     C --> D[11.4 Recovery - DONE]
     D --> E[11.5 Upload and UI integration - DONE]
     E --> F[11.6 End-to-end validation - DONE]
-    F --> G[Phases 4, 5, 9 and local Phase 12 DONE; NEXT 13.1 metrics]
+    F --> G[Local Phase 12 DONE; 13.1 DONE; NEXT 13.2 summary API]
     style G fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
 ```
 
@@ -309,7 +308,7 @@ flowchart LR
     C --> D[12.4 Tool choice or clarification - DONE]
     D --> E[12.5 Confirmed document retry - DONE]
     E --> F[12.6 HTTP, UI, execution records and integration checks - DONE]
-    F --> G[13.1 Dashboard metric definitions - NEXT]
+    F --> G[13.1 Definitions DONE; NEXT 13.2 summary API]
     style G fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
 ```
 
@@ -333,8 +332,22 @@ remains Phase 15; production session/rate-limit work remains Phase 14.
 
 Flow: **organization records -> count by date/status -> dashboard cards and charts**.
 
-- [ ] **13.1 NEXT** Define metrics and the event data needed to calculate them.
-- [ ] **13.2** Add organization-scoped summary APIs for documents, failures, and questions.
+Shared metrics describe current non-deleting organization documents and retained
+uploads. Personal metrics describe your own retained USER messages and REQUEST
+executions; even owners/admins do not get a teammate's private usage. Current document
+snapshots ignore activity dates; daily activity uses UTC, defaults to seven days and
+is capped at 90. Deleted records cannot support lifetime or immutable history totals.
+
+```mermaid
+flowchart LR
+    A[13.1 Metric definitions and date validation - DONE] --> B[13.2 Summary API - NEXT]
+    B --> C[13.3 Cards, date controls and chart]
+    C --> D[13.4 Known fixtures and isolation verification]
+    style B fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
+```
+
+- [x] **13.1 DONE** Define current document totals/statuses, retained uploads, private saved questions and agent REQUEST outcomes; specify sources, UTC/exclusive dates, deletion limits and response scopes. Backend build and 10 contract/date tests passed. [Guide](backend/docs/analytics-step-1-metric-definitions.md). No API/database aggregation is implemented in this step.
+- [ ] **13.2 NEXT** Add the summary API with current membership, shared organization document aggregates and private user activity, consistent snapshots and bounded queries.
 - [ ] **13.3** Add dashboard cards, date filtering, and usage charts.
 - [ ] **13.4** Validate counts against known fixtures and exclude other organizations.
 
@@ -449,6 +462,7 @@ Useful existing evidence:
 - [12.4 Gemini tool selection, strict decision parsing, orchestration and verification limits](backend/docs/agent-step-4-tool-routing.md)
 - [12.5 Durable retry proposals, separate confirmation, expiry and uncertain queue outcomes](backend/docs/agent-step-5-confirmed-retry.md)
 - [12.6 Agent screen/API, private execution records, integrated Chrome verification and Phase 12 completion](backend/docs/agent-step-6-api-ui-verification.md)
+- [13.1 Metric definitions, privacy scopes, retained-data limits, UTC dates and worked examples](backend/docs/analytics-step-1-metric-definitions.md)
 
 Before advancing a step, check:
 
@@ -459,5 +473,5 @@ Before advancing a step, check:
 - [ ] Any remaining limitation is visible here.
 - [ ] The tracker has been updated and I know the next step.
 
-**Next lesson: 13.1 — define each dashboard metric, its organization scope and
-meaning, and the stored data needed to calculate it accurately.**
+**Next lesson: 13.2 — implement the summary API using the defined metric scopes,
+current membership checks, bounded dates, and a consistent database snapshot.**

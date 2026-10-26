@@ -27,7 +27,8 @@
     "test:agent-counts": "npm run build && node --test tests/agent.contracts.test.cjs tests/agent.knowledge.integration.test.cjs tests/agent.document-counts.integration.test.cjs",
     "test:agent-routing": "npm run build && node --test tests/agent.contracts.test.cjs tests/agent.knowledge.integration.test.cjs tests/agent.document-counts.integration.test.cjs tests/agent.routing.test.cjs tests/agent.routing.integration.test.cjs tests/gemini.provider.test.cjs",
     "test:agent-actions": "npm run test:agent-routing && node --test tests/agent.retry.integration.test.cjs tests/document.reprocess.integration.test.cjs",
-    "test:agent-ui": "npm run test:agent-actions && node --test tests/agent.http.integration.test.cjs"
+    "test:agent-ui": "npm run test:agent-actions && node --test tests/agent.http.integration.test.cjs",
+    "test:dashboard-contracts": "npm run build && node --test tests/dashboard.contracts.test.cjs"
   },
   "keywords": [],
   "author": "",
