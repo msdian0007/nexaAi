@@ -4,15 +4,15 @@ Last updated: **2026-10-25**.
 
 ## START HERE: where we are
 
-**Current phase: Phase 9 complete for planned local scope; next is Phase 12 — AI agents.**
-**Last completed step: 9.2 — Safe answer Markdown rendering.**
-**Next implementation step: 12.1 — Define agent tools, inputs, outputs, and permissions.**
+**Current phase: Phase 12 — AI agents.**
+**Last completed step: 12.1 — Define agent tools, inputs, outputs, and permissions.**
+**Next implementation step: 12.2 — Connect the knowledge-answer tool.**
 
-Step 9.2 formats new and saved answers as Markdown, including lists and code blocks.
-Raw HTML stays escaped, unsafe links are not clickable, and generated image URLs
-are not fetched. Source cards remain separate validated evidence.
-[Formatting flow, examples, and safety rules](frontend/docs/chat-step-2-safe-markdown.md).
-The frontend build, changed-file lint and all 25 scoped browser tests passed.
+Step 12.1 defines knowledge answers, document counts, and a confirmed document-retry
+action. A strict parser rejects unknown tools, extra arguments, SQL, identity
+overrides, and model-supplied confirmation flags. Execution is added in later steps.
+[Tool contracts, examples, and request flow](backend/docs/agent-step-1-tool-contracts.md).
+The backend build and all 11 contract tests passed. No agent endpoint is enabled yet.
 
 **Phase 11 is DONE for the verified local workflow.** A real Chrome journey passed:
 queued upload, separate worker, automatic status updates, failed-file retry, a cited
@@ -158,8 +158,8 @@ job is retained. It does not guarantee that processing can never run twice after
 
 **What exists today:** Redis + producer + worker + preparation/recovery + queued uploads
 and automatic status checks, with latest-upload retry controls.
-**What comes next:** Phase 12.1 defines the tools an agent may use, their inputs and
-outputs, and the organization permissions enforced before each tool runs.
+**What comes next:** Phase 12.2 connects the existing document-answer service to the
+knowledge tool, with current membership checks and organization isolation tests.
 
 ## 3. How we will work from now on
 
@@ -199,7 +199,7 @@ flowchart TD
     I --> J[10 Saved conversation history]
     J --> K[11 Background processing - DONE locally]
     K --> L[Earlier gaps in Phases 4, 5 and 9 - DONE locally]
-    L --> M[12 AI agents - NEXT 12.1 tool boundaries]
+    L --> M[12 AI agents - 12.1 DONE; NEXT 12.2 knowledge tool]
     M --> N[13 Analytics dashboard]
     N --> O[14 Security and resource limits]
     O --> P[15 Monitoring and audit history]
@@ -210,7 +210,7 @@ flowchart TD
 ```
 
 Text route: **1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 (done locally)
--> earlier gaps complete -> 12 (next: 12.1) -> 13 -> 14 -> 15 -> 16 -> 17 -> 18.**
+-> earlier gaps complete -> 12 (12.1 done; next: 12.2) -> 13 -> 14 -> 15 -> 16 -> 17 -> 18.**
 
 Some work was implemented in a different chronological order. We keep the original
 phase identities and explicitly return to unfinished features instead of hiding them.
@@ -260,7 +260,7 @@ flowchart LR
     C --> D[11.4 Recovery - DONE]
     D --> E[11.5 Upload and UI integration - DONE]
     E --> F[11.6 End-to-end validation - DONE]
-    F --> G[Phases 4, 5 and 9 DONE; NEXT 12.1 agent tool boundaries]
+    F --> G[Phases 4, 5 and 9 DONE; 12.1 DONE; NEXT 12.2 knowledge tool]
     style G fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
 ```
 
@@ -296,11 +296,26 @@ are implemented explicitly; the model does not get unrestricted application acce
 
 Flow: **request -> choose allowed tool -> validate permission -> run tool -> explain result**.
 
-- [ ] **12.1 NEXT** Define allowed requests, tool inputs, outputs, and organization boundaries.
-- [ ] **12.2** Wrap the existing document-answer flow as the knowledge tool.
-- [ ] **12.3** Add a data-analysis tool with read-only, scoped queries and result limits.
+Initial tool catalog: `knowledge_answer`, `document_counts`, and `retry_document`.
+The data tool uses a query written in backend code and returns saved document counts
+by status; the action tool reuses background processing after separate confirmation.
+The model cannot submit arbitrary SQL or choose the signed user's organization.
+
+```mermaid
+flowchart LR
+    A[12.1 Contracts and parser - DONE] --> B[12.2 Knowledge tool - NEXT]
+    B --> C[12.3 Document counts]
+    C --> D[12.4 Tool choice or clarification]
+    D --> E[12.5 Confirmed document retry]
+    E --> F[12.6 UI, execution records and integration checks]
+    style B fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
+```
+
+- [x] **12.1 DONE** Define exact tool inputs/outputs and permission requirements; implement strict tool-call validation. Backend build and 11 contract tests passed. [Guide](backend/docs/agent-step-1-tool-contracts.md). These tests validate shapes and declared policy, not executor authorization.
+- [ ] **12.2 NEXT** Wrap the existing document-answer flow as the knowledge tool, with current membership and organization checks.
+- [ ] **12.3** Add the read-only document-count tool with scoped queries, fixed output size, and a timeout.
 - [ ] **12.4** Add routing that selects a tool or asks for clarification.
-- [ ] **12.5** Add one limited action workflow, showing the proposed action before user confirmation and execution.
+- [ ] **12.5** Add one-document retry proposals, separate bound confirmation, expiry, fresh permission/state checks, and duplicate protection.
 - [ ] **12.6** Add UI/results, execution records, and tests for disallowed tool calls.
 
 Validation: a document question and a data question use their intended tools;
@@ -420,6 +435,7 @@ Useful existing evidence:
 - [5.3 Library retry controls, automatic progress, and uncertain submissions](backend/docs/document-step-3-library-retries.md)
 - [9.1 Private conversation deletion, ownership, cascades, and late answers](backend/docs/chat-step-1-conversation-deletion.md)
 - [9.2 Safe Markdown, formatting examples, URL restrictions and browser verification](frontend/docs/chat-step-2-safe-markdown.md)
+- [12.1 Agent tool contracts, permissions, confirmation requirements and validation](backend/docs/agent-step-1-tool-contracts.md)
 
 Before advancing a step, check:
 
@@ -430,5 +446,5 @@ Before advancing a step, check:
 - [ ] Any remaining limitation is visible here.
 - [ ] The tracker has been updated and I know the next step.
 
-**Next lesson: 12.1 — define which tools the agent may use, what each accepts and
-returns, and how current organization permissions restrict every call.**
+**Next lesson: 12.2 — connect the existing RAG answer service to the knowledge tool,
+checking current membership and restricting retrieval to the signed organization.**

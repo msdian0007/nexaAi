@@ -21,7 +21,8 @@
     "test:organization-switch": "npm run build && node --test tests/organization.switch.integration.test.cjs tests/organization.invitations.integration.test.cjs tests/organization.profile.integration.test.cjs tests/organization.permissions.integration.test.cjs",
     "test:document-library": "npm run build && node --test tests/document.library.integration.test.cjs tests/document.status.integration.test.cjs",
     "test:document-deletion": "npm run build && node --test tests/document.deletion.integration.test.cjs tests/document.library.integration.test.cjs tests/document.status.integration.test.cjs tests/document.reprocess.integration.test.cjs",
-    "test:conversation-deletion": "npm run build && node --test tests/conversation.deletion.integration.test.cjs tests/conversation.history.integration.test.cjs tests/conversation.persistence.integration.test.cjs"
+    "test:conversation-deletion": "npm run build && node --test tests/conversation.deletion.integration.test.cjs tests/conversation.history.integration.test.cjs tests/conversation.persistence.integration.test.cjs",
+    "test:agent-contracts": "npm run build && node --test tests/agent.contracts.test.cjs"
   },
   "keywords": [],
   "author": "",
