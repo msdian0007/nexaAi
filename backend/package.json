@@ -22,7 +22,8 @@
     "test:document-library": "npm run build && node --test tests/document.library.integration.test.cjs tests/document.status.integration.test.cjs",
     "test:document-deletion": "npm run build && node --test tests/document.deletion.integration.test.cjs tests/document.library.integration.test.cjs tests/document.status.integration.test.cjs tests/document.reprocess.integration.test.cjs",
     "test:conversation-deletion": "npm run build && node --test tests/conversation.deletion.integration.test.cjs tests/conversation.history.integration.test.cjs tests/conversation.persistence.integration.test.cjs",
-    "test:agent-contracts": "npm run build && node --test tests/agent.contracts.test.cjs"
+    "test:agent-contracts": "npm run build && node --test tests/agent.contracts.test.cjs",
+    "test:agent-knowledge": "npm run build && node --test tests/agent.contracts.test.cjs tests/agent.knowledge.integration.test.cjs"
   },
   "keywords": [],
   "author": "",
