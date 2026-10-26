@@ -2,6 +2,7 @@ import { Response } from "express";
 import { AuthenticatedRequest } from "../auth/auth.middleware";
 import { DEFAULT_MIN_SIMILARITY, searchDocumentChunks } from "./document.search";
 import { buildDocumentContext } from "./document.context";
+import { requireProcessingMembership, DocumentDeletionError } from "./document.deletion";
 
 export const searchDocuments = async (req: AuthenticatedRequest, res: Response) => {
   const organizationId = req.user?.organizationId;
@@ -25,6 +26,7 @@ export const searchDocuments = async (req: AuthenticatedRequest, res: Response) 
   }
 
   try {
+    await requireProcessingMembership(req.user!.userId, organizationId);
     const results = await searchDocumentChunks(organizationId, query.trim(), topK, minSimilarity);
     const hasMatches = results.length > 0;
     const context = buildDocumentContext(results);
@@ -34,7 +36,9 @@ export const searchDocuments = async (req: AuthenticatedRequest, res: Response) 
       data: { query: query.trim(), minSimilarity, hasMatches, results, context },
     });
   } catch (error) {
-    console.error("Document search error:", error);
+    if (error instanceof DocumentDeletionError && error.status === 403)
+      return res.status(403).json({ success: false, code: "MEMBERSHIP_REQUIRED", message: "Current membership is required." });
+    console.error("Document search failed.");
     return res.status(500).json({ success: false, message: "Document search failed" });
   }
 };

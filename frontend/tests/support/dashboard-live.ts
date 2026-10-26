@@ -31,8 +31,9 @@ export type DashboardFixture = Ready & {
   control: (command: Command) => Promise<void>;
 };
 
-export const test = base.extend<{ fixture: DashboardFixture }>({
-  fixture: async ({ page }, provideFixture) => {
+export const test = base.extend<{ fixture: DashboardFixture; fullApi: boolean }>({
+  fullApi: [false, { option: true }],
+  fixture: async ({ page, fullApi }, provideFixture) => {
     const backend = fileURLToPath(
       new URL("../../../backend/", import.meta.url),
     );
@@ -42,7 +43,7 @@ export const test = base.extend<{ fixture: DashboardFixture }>({
         import.meta.url,
       ),
     );
-    const child = fork(helper, [], {
+    const child = fork(helper, fullApi ? ["--full-api"] : [], {
       cwd: backend,
       stdio: ["ignore", "ignore", "ignore", "ipc"],
     });

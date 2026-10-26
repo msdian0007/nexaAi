@@ -41,6 +41,7 @@ before(async () => {
       uploadedBy: { create: { id: ownerId, name: "Status test", email: `${ownerId}@example.invalid`, password: "unused" } },
     },
   });
+  await prisma.organizationMember.create({ data: { userId: ownerId, organizationId: ownerId, role: 'MEMBER' } });
   token = jwt.sign({ userId: ownerId, organizationId: ownerId, role: "MEMBER" }, process.env.JWT_SECRET, { expiresIn: "5m" });
   const app = express();
   app.locals.getDocumentQueue = async () => ({ getState: async () => {
@@ -123,12 +124,15 @@ test('scheduled retries override FAILED and queue outages never falsely report a
   } finally { queueUnavailable = false; }
 });
 
-test("another tenant sees the same 404 as a missing document, even with an organization query override", async () => {
+test("query overrides are rejected and an identity without current membership cannot inspect status", async () => {
   const otherTenantToken = jwt.sign({ userId: randomUUID(), organizationId: randomUUID(), role: "OWNER" }, process.env.JWT_SECRET, { expiresIn: '5m' });
   const inaccessible = await getStatus(document.id, otherTenantToken, `?organizationId=${ownerId}`);
   const missing = await getStatus(randomUUID());
-  assert.equal(inaccessible.status, 404);
-  assert.deepEqual(inaccessible, missing);
+  assert.equal(inaccessible.status, 400);
+  const denied = await getStatus(document.id, otherTenantToken);
+  assert.equal(denied.status, 403);
+  assert.deepEqual(denied, await getStatus(randomUUID(), otherTenantToken));
+  assert.equal(missing.status, 404);
   assert.deepEqual(missing.body, { success: false, message: "Document not found" });
 });
 

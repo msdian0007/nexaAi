@@ -6,9 +6,11 @@ const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcrypt');
 const assert = require('node:assert/strict');
+const fs = require('node:fs/promises');
+const path = require('node:path');
 const prisma = require('../../dist/src/config/database').default;
 
-async function startDashboardFixture() {
+async function startDashboardFixture({ fullApi = false } = {}) {
   const org = randomUUID(), foreign = randomUUID(), secret = randomUUID();
   const user = randomUUID(), peer = randomUUID(), outsider = randomUUID();
   const organizations = [org, foreign, secret], users = [user, peer, outsider];
@@ -25,6 +27,13 @@ async function startDashboardFixture() {
   async function stop() {
     try {
       if (server) await new Promise(resolve => server.close(resolve));
+      if (fullApi) for (const id of organizations) {
+        const root = path.resolve('uploads', 'documents', id);
+        assert.equal(path.dirname(root), path.resolve('uploads', 'documents'));
+        // Boundary browser cases submit rejected uploads only. Never recursively
+        // delete an unexpected file: a nonempty directory should fail cleanup.
+        await fs.rmdir(root).catch(error => { if (error.code !== 'ENOENT') throw error; });
+      }
       // Exact generated IDs only: never truncate shared developer tables.
       await prisma.organization.deleteMany({ where: { id: { in: organizations } } });
       await prisma.user.deleteMany({ where: { id: { in: users } } });
@@ -87,12 +96,15 @@ async function startDashboardFixture() {
       for (let i = 0; i < questionCount; i++) await message(c, i, 'USER', organizationId === org ? -1 : 0);
       for (let i = 0; i < requestCount; i++) await execution(userId, organizationId, organizationId === org ? 'FAILED' : 'SUCCEEDED', organizationId === org ? -1 : 0);
     }
-    const app = express();
-    app.use(cors()); app.use(express.json());
-    app.use('/api/v1/auth', require('../../dist/src/auth/auth.routes').default);
-    app.use('/api/v1/auth', require('../../dist/src/auth/auth.protected.route').default);
-    const analytics = require('../../dist/src/analytics/dashboard.routes');
-    app.use('/api/v1/analytics', analytics.default, analytics.dashboardJsonError);
+    const app = fullApi ? require('../../dist/src/api').createApiApp({ origins: ['http://127.0.0.1:4173'] }) : express();
+    if (fullApi) app.locals.getDocumentQueue = async () => { throw new Error('Fixture queue unavailable'); };
+    else {
+      app.use(cors()); app.use(express.json());
+      app.use('/api/v1/auth', require('../../dist/src/auth/auth.routes').default);
+      app.use('/api/v1/auth', require('../../dist/src/auth/auth.protected.route').default);
+      const analytics = require('../../dist/src/analytics/dashboard.routes');
+      app.use('/api/v1/analytics', analytics.default, analytics.dashboardJsonError);
+    }
     server = app.listen(0, '127.0.0.1');
     await once(server, 'listening');
 
@@ -121,7 +133,7 @@ module.exports = { startDashboardFixture };
 
 if (require.main === module) {
   let stopping = false;
-  void startDashboardFixture().then(fixture => {
+  void startDashboardFixture({ fullApi: process.argv.includes('--full-api') }).then(fixture => {
     process.send({ ready: true, ...fixture.ready });
     async function stop(replyTo) {
       if (stopping) return;

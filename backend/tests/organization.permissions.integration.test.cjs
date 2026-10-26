@@ -97,10 +97,12 @@ test('organization member permissions use current database authority', { timeout
     });
     await t.test('another organization cannot be targeted through IDs or body overrides', async () => {
       const missing = await call('DELETE', `/${randomUUID()}`);
-      const foreign = await call('DELETE', `/${memberships.outsider.id}`, { organizationId: otherOrg });
+      assert.equal((await call('DELETE', `/${memberships.outsider.id}`, { organizationId: otherOrg })).status, 400);
+      const foreign = await call('DELETE', `/${memberships.outsider.id}`);
       assert.equal(foreign.status, 404);
       assert.deepEqual(foreign, missing);
-      assert.equal((await call('PATCH', `/${memberships.outsider.id}/role`, { role: 'MEMBER', organizationId: otherOrg })).status, 404);
+      assert.equal((await call('PATCH', `/${memberships.outsider.id}/role`, { role: 'MEMBER', organizationId: otherOrg })).status, 400);
+      assert.equal((await call('PATCH', `/${memberships.outsider.id}/role`, { role: 'MEMBER' })).status, 404);
       assert.equal((await call('GET', '', undefined, token('outsider', 'OWNER', org))).status, 403);
       assert.equal((await prisma.organizationMember.findUniqueOrThrow({ where: { id: memberships.outsider.id } })).role, 'OWNER');
     });

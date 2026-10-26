@@ -1,79 +1,16 @@
-import express from "express";
-import multer from "multer";
-import path from "path";
-import fs from "fs";
-
+import { Router } from "express";
 import { authenticate } from "../auth/auth.middleware";
 import { deleteDocument, documentLibrary, documentStatus, reprocessDocument, uploadDocument } from "./document.controller";
 import { searchDocuments } from "./document.search.controller";
+import { requestFields, apiError } from "../http/api.boundary";
+import { permitUpload, receiveUpload, inspectUpload, uploadError } from "./document.upload";
 
-const router = express.Router();
-router.get("/", authenticate, documentLibrary);
-router.delete("/:documentId", authenticate, deleteDocument);
-
-router.post("/search", authenticate, searchDocuments);
-
-router.get("/:documentId/status", authenticate, documentStatus);
-router.post("/:documentId/reprocess", authenticate, reprocessDocument);
-
-const storage = multer.diskStorage({
-  destination: (req: any, _file, cb) => {
-    const organizationId = req.user?.organizationId;
-
-    if (!organizationId) {
-      return cb(new Error("Organization ID is required"), "");
-    }
-
-    const uploadDir = path.join(
-      process.cwd(),
-      "uploads",
-      "documents",
-      organizationId
-    );
-
-    fs.mkdirSync(uploadDir, {
-      recursive: true,
-    });
-
-    cb(null, uploadDir);
-  },
-
-  filename: (_req, file, cb) => {
-    const uniqueName = `${Date.now()}-${Math.round(
-      Math.random() * 1e9
-    )}${path.extname(file.originalname)}`;
-
-    cb(null, uniqueName);
-  },
-});
-
-const upload = multer({
-  storage,
-
-  limits: {
-    fileSize: 10 * 1024 * 1024,
-  },
-
-  fileFilter: (_req, file, cb) => {
-    const allowedTypes = [
-      "application/pdf",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      "text/plain",
-    ];
-
-    if (allowedTypes.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error("Only PDF, DOCX and TXT files are allowed"));
-    }
-  },
-});
-
-router.post(
-  "/upload",
-  authenticate,
-  upload.single("document"),
-  uploadDocument
-);
-
+const router = Router();
+router.get("/", authenticate, requestFields({ query: ["limit", "cursor"] }), documentLibrary);
+router.delete("/:documentId", authenticate, requestFields({ ids: ["documentId"] }), deleteDocument);
+router.post("/search", authenticate, requestFields({ body: ["query", "topK", "minSimilarity"], required: ["query"] }), searchDocuments);
+router.get("/:documentId/status", authenticate, requestFields({ ids: ["documentId"] }), documentStatus);
+router.post("/:documentId/reprocess", authenticate, requestFields({ ids: ["documentId"] }), reprocessDocument);
+router.post("/upload", authenticate, permitUpload, receiveUpload, inspectUpload, uploadDocument);
+router.use(uploadError, apiError);
 export default router;

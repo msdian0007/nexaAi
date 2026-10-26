@@ -85,7 +85,8 @@ async function search(body, authorization = token) {
 }
 
 test("ranks real semantic matches and excludes other tenants and incomplete content", async () => {
-  const response = await search({ query: question, minSimilarity: 0, organizationId: tenants[1] });
+  assert.equal((await search({ query: question, minSimilarity: 0, organizationId: tenants[1] })).status, 400);
+  const response = await search({ query: question, minSimilarity: 0 });
   assert.equal(response.status, 200);
   const results = response.body.data.results;
   assert.equal(results.length, 2);

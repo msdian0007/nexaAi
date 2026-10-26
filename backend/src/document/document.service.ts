@@ -1,4 +1,5 @@
 import prisma from "../config/database";
+import { DocumentDeletionError } from "./document.deletion";
 import { getDocumentQueue, QueueProvider } from "./document.queue.runtime";
 
 export type ProcessingState =
@@ -86,6 +87,7 @@ export async function resolveDocumentStatus(
 }
 
 interface CreateDocumentInput {
+  id: string;
   organizationId: string;
   uploadedById: string;
   name: string;
@@ -96,8 +98,17 @@ interface CreateDocumentInput {
 }
 
 export const createDocument = async (data: CreateDocumentInput) => {
-  return prisma.document.create({
+  return prisma.$transaction(async tx => {
+    // Member removal takes the same organization lock. Recheck after the bytes
+    // arrive so removal during an upload cannot admit an unauthorized record.
+    await tx.$queryRaw`SELECT id FROM "Organization" WHERE id = ${data.organizationId} FOR UPDATE`;
+    const member = await tx.organizationMember.findUnique({
+      where: { userId_organizationId: { userId: data.uploadedById, organizationId: data.organizationId } }, select: { id: true },
+    });
+    if (!member) throw new DocumentDeletionError(403, "Current membership is required");
+    return tx.document.create({
     data: {
+      id: data.id,
       organizationId: data.organizationId,
       uploadedById: data.uploadedById,
       name: data.name,
@@ -106,5 +117,6 @@ export const createDocument = async (data: CreateDocumentInput) => {
       size: data.size,
       storagePath: data.storagePath,
     },
+    });
   });
 };

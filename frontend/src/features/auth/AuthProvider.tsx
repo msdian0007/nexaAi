@@ -202,6 +202,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             "ORGANIZATION_ACCESS_REVOKED",
             "DASHBOARD_MEMBERSHIP_REQUIRED",
             "AGENT_MEMBERSHIP_REQUIRED",
+            "MEMBERSHIP_REQUIRED",
           ].includes(error.code ?? "")
         ) {
           cancelPending();

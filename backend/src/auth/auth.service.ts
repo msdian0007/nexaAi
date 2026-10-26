@@ -1,4 +1,5 @@
 import { issueAuthToken } from "./auth.tokens";
+import { AuthOperationError } from "./auth.errors";
 import { comparePassword, hashPassword } from "./auth.utils";
 import { LoginInput, RegisterInput } from "./auth.types";
 import prisma from "../config/database";
@@ -18,7 +19,7 @@ export const registerUser = async (data: RegisterInput) => {
   });
 
   if (existingUser) {
-    throw new Error("User with this email already exists");
+    throw new AuthOperationError(409, "REGISTRATION_UNAVAILABLE", "Registration could not be completed with these details.");
   }
 
   // Hash password
@@ -102,19 +103,19 @@ export const loginUser = async (data: LoginInput) => {
   });
 
   if (!user) {
-    throw new Error("Invalid email or password");
+    throw new AuthOperationError(401, "INVALID_CREDENTIALS", "Incorrect email or password.");
   }
 
   const isPasswordValid = await comparePassword(password, user.password);
 
   if (!isPasswordValid) {
-    throw new Error("Invalid email or password");
+    throw new AuthOperationError(401, "INVALID_CREDENTIALS", "Incorrect email or password.");
   }
 
   const membership = user.memberships[0];
 
   if (!membership) {
-    throw new Error("User is not associated with any organization");
+    throw new AuthOperationError(401, "INVALID_CREDENTIALS", "Incorrect email or password.");
   }
 
   const credentials = issueAuthToken({

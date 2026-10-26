@@ -131,7 +131,8 @@ test("concurrent retry of a retained failed job creates only one waiting instruc
 test("tenant mismatch and missing IDs return the same 404 without touching the job", async () => {
   await withDocument(async (document, token) => {
     await withDocument(async (_other, otherToken) => {
-      const wrong = await retry(document.id, otherToken, { organizationId: document.organizationId });
+      assert.equal((await retry(document.id, otherToken, { organizationId: document.organizationId })).status, 400);
+      const wrong = await retry(document.id, otherToken);
       assert.equal(wrong.status, 404);
       assert.deepEqual(wrong, await retry(randomUUID(), token));
     });

@@ -82,7 +82,9 @@ test("answers using only the signed tenant's evidence and server-owned source me
     return JSON.stringify({ status: "answered", answer: "Employees receive 18 days [S1].", citations: ["S1"] });
   };
   const previous = calls;
-  const result = await query({ question: ` ${question} `, organizationId: tenants[1] });
+  assert.equal((await query({ question: ` ${question} `, organizationId: tenants[1] })).status, 400);
+  assert.equal(calls, previous);
+  const result = await query({ question: ` ${question} ` });
   assert.equal(result.status, 200);
   assert.equal(calls, previous + 1);
   assert.equal(result.body.data.question, question);

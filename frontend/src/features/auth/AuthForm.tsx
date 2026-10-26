@@ -42,6 +42,10 @@ export function AuthForm({
     const organizationName = String(
       fields.get("organizationName") ?? "",
     ).trim();
+    if (new TextEncoder().encode(password).length > 72) {
+      setError("Use a password containing at most 72 UTF-8 bytes.");
+      return;
+    }
     if (registering && (!name || (!invitationToken && !organizationName))) {
       setError(
         invitationToken

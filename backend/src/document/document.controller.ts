@@ -6,6 +6,9 @@ import {
 } from "./document.service";
 import { AuthenticatedRequest } from "../auth/auth.middleware";
 import path from "path";
+import { randomUUID } from "node:crypto";
+import prisma from "../config/database";
+import { removeUnacceptedUpload } from "./document.upload";
 import { getDocumentQueue, QueueProvider } from "./document.queue.runtime";
 import { DocumentJobRetryError } from "./document.queue";
 import { deleteOrganizationDocument, DocumentDeletionError, requireProcessingMembership, withDocumentSubmissionLock } from "./document.deletion";
@@ -167,6 +170,7 @@ export const documentStatus = async (
   const ids = identity(req, res);
   if (!ids) return;
   try {
+    await requireProcessingMembership(req.user!.userId, ids.organizationId);
     const document = await getDocumentStatus(
       ids.documentId,
       ids.organizationId,
@@ -177,7 +181,9 @@ export const documentStatus = async (
         .status(404)
         .json({ success: false, message: "Document not found" });
     return res.status(200).json({ success: true, data: document });
-  } catch {
+  } catch (error) {
+    if (error instanceof DocumentDeletionError && error.status === 403)
+      return res.status(403).json({ success: false, code: "MEMBERSHIP_REQUIRED", message: "Current membership is required." });
     console.error("Get document status failed.");
     return res
       .status(500)
@@ -195,8 +201,13 @@ export const uploadDocument = async (
     return res
       .status(400)
       .json({ success: false, message: "Document file is required" });
+  let saved = false;
+  // Keep an identity before the transaction, so a lost commit acknowledgement
+  // can be reconciled without deleting a file belonging to a committed record.
+  const documentId = randomUUID();
   try {
     const document = await createDocument({
+      id: documentId,
       organizationId: req.user.organizationId,
       uploadedById: req.user.userId,
       name: req.file.filename,
@@ -205,6 +216,7 @@ export const uploadDocument = async (
       size: req.file.size,
       storagePath: path.relative(process.cwd(), req.file.path),
     });
+    saved = true;
     try {
       const organizationId = req.user.organizationId;
       await withDocumentSubmissionLock(document.id, organizationId, async () => {
@@ -229,7 +241,31 @@ export const uploadDocument = async (
       data: accepted,
       document: accepted,
     });
-  } catch {
+  } catch (error) {
+    // Verify absence before unlinking: an exception alone does not prove that a
+    // commit failed. Keep ambiguous files for reconciliation rather than breaking
+    // a saved document. The lookup is scoped to this generated ID and actor.
+    if (!saved) {
+      try {
+        const retained = await prisma.$transaction(async tx => {
+          // Wait for any earlier admission transaction to finish before checking
+          // absence. READ COMMITTED gives the lookup a fresh post-lock snapshot.
+          await tx.$queryRaw`SELECT id FROM "Organization" WHERE id = ${req.user!.organizationId} FOR UPDATE`;
+          return tx.document.findFirst({
+            where: { id: documentId, organizationId: req.user!.organizationId, uploadedById: req.user!.userId },
+            select: { id: true, originalName: true, status: true, updatedAt: true },
+          });
+        }, { isolationLevel: "ReadCommitted", timeout: 5000, maxWait: 2000 });
+        if (retained) return res.status(503).json({ success: false, code: "DOCUMENT_QUEUE_UNAVAILABLE",
+          message: "File saved, but processing submission was not confirmed. Check its status.", data: documentView(retained, "UNAVAILABLE") });
+      } catch {
+        return res.status(503).json({ success: false, code: "UPLOAD_SAVE_UNCONFIRMED", message: "File saving could not be confirmed. Refresh the document library before uploading again." });
+      }
+      try { await removeUnacceptedUpload(req); }
+      catch { return res.status(503).json({ success: false, code: "UPLOAD_CLEANUP_UNCONFIRMED", message: "File cleanup could not be confirmed." }); }
+    }
+    if (error instanceof DocumentDeletionError && error.status === 403)
+      return res.status(403).json({ success: false, code: "MEMBERSHIP_REQUIRED", message: "Current membership is required." });
     console.error("Upload document failed.");
     return res
       .status(500)

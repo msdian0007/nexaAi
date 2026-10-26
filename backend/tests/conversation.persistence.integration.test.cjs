@@ -59,7 +59,9 @@ const messages = id => prisma.message.findMany({ where: { conversationId: id }, 
 
 test('creates and appends complete exchanges with server-owned citations and signed ownership', async () => {
   generate = answer;
-  const first = await query({ question: ' How much leave? ', userId: peer, organizationId: other, sources: [{ sourceId: 'BAD' }] });
+  const rejected = await query({ question: ' How much leave? ', userId: peer, organizationId: other, sources: [{ sourceId: 'BAD' }] });
+  assert.equal(rejected.status, 400);
+  const first = await query({ question: ' How much leave? ' });
   assert.equal(first.status, 200);
   const data = first.body.data;
   const conversation = await prisma.conversation.findUniqueOrThrow({ where: { id: data.conversationId } });

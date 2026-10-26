@@ -96,6 +96,7 @@ function invitationId(req: AuthenticatedRequest) {
 function email(value: unknown) {
   if (
     typeof value !== "string" ||
+    /[\u0000-\u001f\u007f]/.test(value) ||
     value.trim().length > 254 ||
     !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())
   )
@@ -143,6 +144,7 @@ export const addMember = async (req: AuthenticatedRequest, res: Response) => {
     const email = req.body?.email;
     if (
       typeof email !== "string" ||
+      /[\u0000-\u001f\u007f]/.test(email) ||
       email.trim().length > 254 ||
       !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
     ) {

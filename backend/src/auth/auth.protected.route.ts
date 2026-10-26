@@ -8,6 +8,7 @@ import { Role } from "../../generated/prisma/enums";
 import prisma from "../config/database";
 import { listUserOrganizations, switchUserOrganization } from "./auth.service";
 import { OrganizationPermissionError } from "../organization/organization.service";
+import { requestFields } from "../http/api.boundary";
 
 const router = Router();
 router.post("/logout", authenticate, async (req: AuthenticatedRequest, res) => {
@@ -40,11 +41,11 @@ function failure(res: import("express").Response, error: unknown) {
 
 // These account-level actions can recover from removal from the active team,
 // but list/switch only memberships belonging to the signed-in user.
-router.get("/organizations", authenticate, async (req: AuthenticatedRequest, res) => {
+router.get("/organizations", authenticate, requestFields(), async (req: AuthenticatedRequest, res) => {
   try { return res.json({ success: true, data: await listUserOrganizations(actorId(req)) }); }
   catch (error) { return failure(res, error); }
 });
-router.post("/switch-organization", authenticate, async (req: AuthenticatedRequest, res) => {
+router.post("/switch-organization", authenticate, requestFields({ body: ["organizationId"], required: ["organizationId"] }), async (req: AuthenticatedRequest, res) => {
   try {
     const userId = actorId(req);
     const body = req.body;
@@ -59,6 +60,7 @@ router.post("/switch-organization", authenticate, async (req: AuthenticatedReque
 router.get(
   "/me",
   authenticate,
+  requestFields(),
   async (req: AuthenticatedRequest, res) => {
     try {
       const userId = actorId(req);
@@ -87,6 +89,7 @@ router.get(
 router.get(
   "/admin-test",
   authenticate,
+  requestFields(),
   authorize(Role.OWNER, Role.ADMIN),
   (req: AuthenticatedRequest, res) => {
     return res.status(200).json({

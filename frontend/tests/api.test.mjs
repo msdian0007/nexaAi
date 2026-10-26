@@ -58,3 +58,11 @@ test('preserves caller cancellation so unmounted views can ignore it', async () 
   });
   await assert.rejects(client('/auth/me', { signal: controller.signal }), error => error.name === 'AbortError');
 });
+
+test('upload/origin errors use known local messages and unknown codes never read object prototypes', async () => {
+  for (const [status, code, phrase] of [[413, 'UPLOAD_TOO_LARGE', '10 MiB'], [415, 'INVALID_FILE_CONTENT', 'file content'],
+    [400, 'EMPTY_UPLOAD', 'empty'], [403, 'ORIGIN_NOT_ALLOWED', 'frontend address'], [400, '__proto__', 'check your details']]) {
+    const client = createApiClient('https://backend.example', async () => Response.json({ success: false, code, message: 'PRIVATE SQL' }, { status }));
+    await assert.rejects(client('/documents/upload'), error => typeof error.message === 'string' && error.message.includes(phrase) && !error.message.includes('PRIVATE'));
+  }
+});

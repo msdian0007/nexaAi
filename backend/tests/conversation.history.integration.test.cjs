@@ -62,9 +62,10 @@ async function get(path = '', token = sign(own)) {
 }
 
 test('list pagination is deterministic at tied timestamps and exposes only owned summaries', async () => {
+  assert.equal((await get(`?organizationId=${other}&userId=${peer}`)).status, 400);
   const ids = []; let next = null;
   do {
-    const result = await get(`?limit=1${next ? `&cursor=${next}` : ''}&organizationId=${other}&userId=${peer}`);
+    const result = await get(`?limit=1${next ? `&cursor=${next}` : ''}`);
     assert.equal(result.status, 200); assert.equal(result.cache, 'no-store');
     const data = result.body.data;
     assert.equal(data.conversations.length, 1);

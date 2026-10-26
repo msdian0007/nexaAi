@@ -1,5 +1,6 @@
 import { Router } from "express";
 import type { ErrorRequestHandler } from "express";
+import { requestFields } from "../http/api.boundary";
 import { login, register, registerInvitation } from "./auth.controller";
 
 const router = Router();
@@ -15,8 +16,8 @@ export const authJsonError: ErrorRequestHandler = (error, _req, res, next) => {
 // Login/register return bearer credentials and must never be cached.
 router.use((_req, res, next) => { res.setHeader("Cache-Control", "no-store"); next(); });
 
-router.post("/register", register);
-router.post("/register-invitation", registerInvitation);
-router.post("/login", login);
+router.post("/register", requestFields({ body: ["name", "email", "password", "organizationName"], required: ["name", "email", "password", "organizationName"] }), register);
+router.post("/register-invitation", requestFields({ body: ["name", "email", "password", "token"], required: ["name", "email", "password", "token"] }), registerInvitation);
+router.post("/login", requestFields({ body: ["email", "password"], required: ["email", "password"] }), login);
 
 export default router;

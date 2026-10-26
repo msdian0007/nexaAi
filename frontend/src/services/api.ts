@@ -77,6 +77,19 @@ export function createApiClient(
       );
       const payload: unknown = await response.json().catch(() => null);
       if (!response.ok) {
+        const code = isRecord(payload) && typeof payload.code === "string" ? payload.code : undefined;
+        // Known codes get actionable, locally written text. Never display a
+        // server's arbitrary error message, even for upload/validation failures.
+        const inputMessages: Record<string, string> = {
+          ORIGIN_NOT_ALLOWED: "Open NexaAI from an allowed frontend address.",
+          UPLOAD_TOO_LARGE: "The file must be 10 MiB or smaller.",
+          UNSUPPORTED_FILE_TYPE: "Choose a PDF, DOCX, or TXT file with a matching file type.",
+          INVALID_FILE_CONTENT: "The file content does not match its format. Choose a valid PDF, DOCX, or UTF-8 TXT file.",
+          EMPTY_UPLOAD: "This file is empty. Choose a file containing content.",
+          INVALID_UPLOAD: "Upload exactly one document file without additional fields.",
+          UPLOAD_SAVE_UNCONFIRMED: "File saving could not be confirmed. Refresh the document library before uploading again.",
+        };
+        const inputMessage = code && Object.prototype.hasOwnProperty.call(inputMessages, code) ? inputMessages[code] : undefined;
         // Backend auth handlers may return internal error messages. Use safe UI text.
         const message =
           response.status === 401
@@ -89,11 +102,9 @@ export function createApiClient(
                   ? "The service is currently unavailable. Please try again later."
                   : "The request could not be completed. Please check your details.";
         throw new ApiError(
-          message,
+          inputMessage || (response.status === 413 ? "The request is too large. Use a smaller request or file." : response.status === 415 ? "The file or request format is not supported." : message),
           response.status,
-          isRecord(payload) && typeof payload.code === "string"
-            ? payload.code
-            : undefined,
+          code,
           // Views must validate this before use. A failed queue submission can
           // still include a safely scoped, saved document that the user can recover.
           isRecord(payload) && payload.code === "DOCUMENT_QUEUE_UNAVAILABLE"

@@ -165,6 +165,15 @@ export function DocumentsPage() {
       ) {
         setDocument(null);
         setError("This document is no longer available in your organization.");
+      } else if (kind === "upload" && failure instanceof ApiError && (
+        ([400, 413, 415].includes(failure.status) && ["EMPTY_UPLOAD", "MISSING_UPLOAD", "UNSUPPORTED_FILE_TYPE", "INVALID_FILE_CONTENT", "INVALID_UPLOAD", "UPLOAD_TOO_LARGE", "INVALID_REQUEST", "UNSUPPORTED_CONTENT_TYPE", "REQUEST_TOO_LARGE"].includes(failure.code ?? "")) || failure.code === "ORIGIN_NOT_ALLOWED"
+      )) {
+        // These admission errors confirm that no document was accepted. Show
+        // the safe API-client guidance so users can choose a different file.
+        setError(failure.message);
+      } else if (kind === "upload" && failure instanceof ApiError && failure.code === "UPLOAD_SAVE_UNCONFIRMED") {
+        setLibraryRevision((value) => value + 1);
+        setError(failure.message);
       } else if (kind === "upload") {
         // A lost response can still mean the file was saved; reread the library.
         setLibraryRevision((value) => value + 1);
