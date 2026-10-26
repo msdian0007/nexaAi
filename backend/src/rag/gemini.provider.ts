@@ -32,6 +32,9 @@ export const createGeminiGenerator = (options: {
   model?: string;
   timeoutMs?: number;
   fetchImpl?: typeof fetch;
+  // Server-owned schema lets routing reuse the same transport/error handling.
+  // Callers must still validate the returned JSON; the default remains RAG.
+  responseSchema?: Record<string, unknown>;
 } = {}): GenerateAnswerText => async messages => {
   // Resolve configuration at call time: empty-context fallback needs no API key.
   const apiKey = (options.apiKey ?? process.env.GEMINI_API_KEY)?.trim();
@@ -63,7 +66,7 @@ export const createGeminiGenerator = (options: {
           generationConfig: {
             candidateCount: 1,
             maxOutputTokens: 4096,
-            responseFormat: { text: { mimeType: "APPLICATION_JSON", schema: answerSchema } },
+            responseFormat: { text: { mimeType: "APPLICATION_JSON", schema: options.responseSchema ?? answerSchema } },
           },
         }),
       },

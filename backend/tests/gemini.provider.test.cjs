@@ -39,6 +39,23 @@ test("maps HTTP failures without leaking error bodies or retrying", async () => 
   }
 });
 
+test("supports a server-owned routing schema while preserving the default answer schema", async () => {
+  const { AGENT_ROUTING_SCHEMA } = require('../dist/src/agents/agent.routing');
+  const decision = JSON.stringify({ kind: 'tool', tool: 'document_counts', message: '' });
+  const generate = createGeminiGenerator({ apiKey: 'test-key', responseSchema: AGENT_ROUTING_SCHEMA,
+    fetchImpl: async (_url, init) => {
+      assert.deepEqual(JSON.parse(init.body).generationConfig.responseFormat.text.schema, AGENT_ROUTING_SCHEMA);
+      return Response.json(envelope({ content: { parts: [{ text: decision }] } }));
+    },
+  });
+  assert.equal(await generate(messages), decision);
+  // A separate default generator must still request the original RAG fields.
+  await make(async (_url, init) => {
+    assert.deepEqual(JSON.parse(init.body).generationConfig.responseFormat.text.schema.required, ['status', 'answer', 'citations']);
+    return Response.json(envelope());
+  })(messages);
+});
+
 test("rejects blocked, truncated, and malformed responses", async () => {
   for (const [body, code] of [
     [{ promptFeedback: { blockReason: "SAFETY" } }, "BLOCKED"],

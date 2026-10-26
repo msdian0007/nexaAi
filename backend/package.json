@@ -24,7 +24,8 @@
     "test:conversation-deletion": "npm run build && node --test tests/conversation.deletion.integration.test.cjs tests/conversation.history.integration.test.cjs tests/conversation.persistence.integration.test.cjs",
     "test:agent-contracts": "npm run build && node --test tests/agent.contracts.test.cjs",
     "test:agent-knowledge": "npm run build && node --test tests/agent.contracts.test.cjs tests/agent.knowledge.integration.test.cjs",
-    "test:agent-counts": "npm run build && node --test tests/agent.contracts.test.cjs tests/agent.knowledge.integration.test.cjs tests/agent.document-counts.integration.test.cjs"
+    "test:agent-counts": "npm run build && node --test tests/agent.contracts.test.cjs tests/agent.knowledge.integration.test.cjs tests/agent.document-counts.integration.test.cjs",
+    "test:agent-routing": "npm run build && node --test tests/agent.contracts.test.cjs tests/agent.knowledge.integration.test.cjs tests/agent.document-counts.integration.test.cjs tests/agent.routing.test.cjs tests/agent.routing.integration.test.cjs tests/gemini.provider.test.cjs"
   },
   "keywords": [],
   "author": "",
