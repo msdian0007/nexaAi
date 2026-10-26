@@ -1,4 +1,8 @@
-import type { AgentContext, AgentToolResult } from "./agent.contracts";
+import type {
+  AgentContext,
+  AgentToolResult,
+  AgentToolCall,
+} from "./agent.contracts";
 import { readAgentContext, requireAgentMembership } from "./agent.access";
 import { readAgentRequest, selectAgentDecision } from "./agent.routing";
 import { executeKnowledgeTool } from "./knowledge.tool";
@@ -19,7 +23,10 @@ export type AgentResponse =
 export async function runAgentRequest(
   authenticatedContext: AgentContext,
   value: unknown,
-  options: { queueProvider?: QueueProvider } = {},
+  options: {
+    queueProvider?: QueueProvider;
+    onToolSelected?: (tool: AgentToolCall["tool"]) => Promise<void>;
+  } = {},
 ): Promise<AgentResponse> {
   const context = readAgentContext(authenticatedContext);
   const request = readAgentRequest(value);
@@ -30,6 +37,8 @@ export async function runAgentRequest(
   // Also withhold clarification/unsupported text after revocation during routing.
   await requireAgentMembership(context);
   if (decision.kind !== "tool") return decision;
+  // The HTTP layer records only the selected name, before any tool work begins.
+  await options.onToolSelected?.(decision.call.tool);
 
   // Explicit dispatch is the execution allowlist. An action decision can create
   // a proposal only; confirmation is never reachable from this model-driven path.
@@ -45,7 +54,14 @@ export async function runAgentRequest(
         result: await executeDocumentCountsTool(context, decision.call),
       };
     case "retry_document":
-      return { kind: "action_proposal", proposal: await proposeDocumentRetry(context, decision.call, options.queueProvider) };
+      return {
+        kind: "action_proposal",
+        proposal: await proposeDocumentRetry(
+          context,
+          decision.call,
+          options.queueProvider,
+        ),
+      };
     default:
       throw new Error("The selected tool is not enabled.");
   }

@@ -19,7 +19,7 @@ type Exchange = { id: string; question: string; answer: ChatAnswer };
 
 // Stored and newly generated answers share safe Markdown formatting. Source cards
 // remain plain React text; passage numbers represent chunks, not PDF pages.
-function AnswerView({
+export function AnswerView({
   answer,
   focus = false,
 }: {

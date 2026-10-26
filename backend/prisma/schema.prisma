@@ -80,6 +80,7 @@ model OrganizationMember {
   // Conversation ownership uses this membership, not just an unrelated user ID.
   conversations Conversation[]
   retryProposals AgentRetryProposal[]
+  agentExecutions AgentExecution[]
 
   @@unique([userId, organizationId])
   @@index([organizationId])
@@ -100,6 +101,32 @@ enum AgentRetryProposalState {
   REJECTED
   UNCERTAIN
   CANCELLED
+}
+
+enum AgentExecutionOutcome {
+  STARTED
+  SUCCEEDED
+  FAILED
+  UNCONFIRMED
+}
+
+// Deliberately metadata only: no prompts, answers, passages, secrets or raw errors.
+model AgentExecution {
+  id             String @id @default(uuid())
+  userId         String
+  organizationId String
+  operation      String
+  tool           String?
+  proposalId     String?
+  outcome        AgentExecutionOutcome @default(STARTED)
+  errorCode      String?
+  startedAt      DateTime @default(now())
+  finishedAt     DateTime?
+  durationMs     Int?
+
+  owner OrganizationMember @relation(fields: [userId, organizationId], references: [userId, organizationId], onDelete: Cascade)
+
+  @@index([userId, organizationId, startedAt, id])
 }
 
 // This table authorizes only retry_document, never arbitrary model-selected writes.

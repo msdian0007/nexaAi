@@ -4,16 +4,16 @@ Last updated: **2026-10-26**.
 
 ## START HERE: where we are
 
-**Current phase: Phase 12 — AI agents.**
-**Last completed step: 12.5 — Add confirmed document-retry actions.**
-**Next implementation step: 12.6 — Connect agent HTTP/UI, execution records, and integration checks.**
+**Current phase: Phase 12 complete for the documented local flow; next is Phase 13 — analytics.**
+**Last completed step: 12.6 — Connect agent HTTP/UI, execution records, and integration checks.**
+**Next implementation step: 13.1 — Define dashboard metrics and their supporting data.**
 
-Step 12.5 adds durable, five-minute retry proposals and separate confirmation/cancel
-functions. Confirmation claims once, checks membership and document version/state,
-then submits background work. Uncertain acknowledgements never auto-repeat.
-[Proposal flow, states, migration, and examples](backend/docs/agent-step-5-confirmed-retry.md).
-The local migration, Prisma validation, backend build and all 86 scoped tests passed.
-Tests used isolated PostgreSQL fixtures/Redis queues. No agent endpoint is enabled yet.
+Step 12.6 adds the Agent screen, authenticated endpoints, private metadata-only
+execution records, typed results, and separate proposal confirmation/cancellation.
+[Screen/API flow, manual walkthrough, and verification](backend/docs/agent-step-6-api-ui-verification.md).
+The migration, both builds, changed-file lint, Prisma validation, 100 backend tests
+and 37 distinct browser tests passed. The integrated Chrome journey used real auth,
+PostgreSQL and Redis with controlled provider output; live intent accuracy remains unverified.
 
 **Phase 11 is DONE for the verified local workflow.** A real Chrome journey passed:
 queued upload, separate worker, automatic status updates, failed-file retry, a cited
@@ -159,8 +159,8 @@ job is retained. It does not guarantee that processing can never run twice after
 
 **What exists today:** Redis + producer + worker + preparation/recovery + queued uploads
 and automatic status checks, with latest-upload retry controls.
-**What comes next:** Phase 12.6 connects agent endpoints and screen, displays typed
-results and confirmation controls, records executions, and verifies the integrated flow.
+**What comes next:** Phase 13.1 defines useful dashboard numbers, their exact meaning,
+organization permissions, and which saved records can support each metric.
 
 ## 3. How we will work from now on
 
@@ -200,18 +200,18 @@ flowchart TD
     I --> J[10 Saved conversation history]
     J --> K[11 Background processing - DONE locally]
     K --> L[Earlier gaps in Phases 4, 5 and 9 - DONE locally]
-    L --> M[12 AI agents - 12.5 DONE; NEXT 12.6 HTTP and UI]
-    M --> N[13 Analytics dashboard]
+    L --> M[12 AI agents - DONE for documented local flow]
+    M --> N[13 Analytics dashboard - NEXT 13.1 metric definitions]
     N --> O[14 Security and resource limits]
     O --> P[15 Monitoring and audit history]
     P --> Q[16 Full-system testing]
     Q --> R[17 Application containers and automated checks]
     R --> S[18 Deployment and production validation]
-    style M fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
+    style N fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
 ```
 
 Text route: **1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 (done locally)
--> earlier gaps complete -> 12 (12.5 done; next: 12.6) -> 13 -> 14 -> 15 -> 16 -> 17 -> 18.**
+-> earlier gaps complete -> 12 (done for local flow) -> 13 (next: 13.1) -> 14 -> 15 -> 16 -> 17 -> 18.**
 
 Some work was implemented in a different chronological order. We keep the original
 phase identities and explicitly return to unfinished features instead of hiding them.
@@ -261,7 +261,7 @@ flowchart LR
     C --> D[11.4 Recovery - DONE]
     D --> E[11.5 Upload and UI integration - DONE]
     E --> F[11.6 End-to-end validation - DONE]
-    F --> G[Phases 4, 5 and 9 DONE; 12.5 DONE; NEXT 12.6 HTTP and UI]
+    F --> G[Phases 4, 5, 9 and local Phase 12 DONE; NEXT 13.1 metrics]
     style G fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
 ```
 
@@ -308,25 +308,32 @@ flowchart LR
     B --> C[12.3 Document counts - DONE]
     C --> D[12.4 Tool choice or clarification - DONE]
     D --> E[12.5 Confirmed document retry - DONE]
-    E --> F[12.6 HTTP, UI, execution records and integration checks - NEXT]
-    style F fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
+    E --> F[12.6 HTTP, UI, execution records and integration checks - DONE]
+    F --> G[13.1 Dashboard metric definitions - NEXT]
+    style G fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
 ```
 
 - [x] **12.1 DONE** Define exact tool inputs/outputs and permission requirements; implement strict tool-call validation. Backend build and 11 contract tests passed. [Guide](backend/docs/agent-step-1-tool-contracts.md). These tests validate shapes and declared policy, not executor authorization.
-- [x] **12.2 DONE** Connect the knowledge executor to existing RAG with current membership checks before retrieval and after generation, strict inputs and server-owned settings. Backend build and 21 contract/integration tests passed, including real scoped vector retrieval and revoked access. [Guide](backend/docs/agent-step-2-knowledge-tool.md). Agent routing/UI remain later steps.
+- [x] **12.2 DONE** Connect the knowledge executor to existing RAG with current membership checks before retrieval and after generation, strict inputs and server-owned settings. Backend build and 21 contract/integration tests passed, including real scoped vector retrieval and revoked access. [Guide](backend/docs/agent-step-2-knowledge-tool.md). Routing/UI were subsequently delivered in 12.4/12.6.
 - [x] **12.3 DONE** Add document counts with current membership and a scoped aggregate in one read-only snapshot, zero-filled status totals and database/transaction timeouts. Backend build and 32 agent tests passed, including real write rejection, slow-query cancellation and concurrent-insert consistency. [Guide](backend/docs/agent-step-3-document-counts.md). Counts describe saved database status, not live Redis state.
-- [x] **12.4 DONE** Connect validated Gemini selection to one read executor or clarification/unsupported output. Preserve original questions, reject forged arguments/actions, and recheck access after selection. Backend build and 59 scoped tests passed with controlled model decisions and real executor/database integration. [Guide](backend/docs/agent-step-4-tool-routing.md). Live classification evaluation and HTTP/UI integration remain later work.
-- [x] **12.5 DONE** Add durable owned/version-bound five-minute retry proposals, separate confirmation/cancel/receipt functions, atomic single-use claims and existing queue/lock coordination. Migration, Prisma validation, backend build and 86 scoped tests passed. [Guide](backend/docs/agent-step-5-confirmed-retry.md). Routing requires one explicit document ID; filename-only requests need clarification. HTTP/UI confirmation remains 12.6.
-- [ ] **12.6 NEXT** Add agent HTTP routes, UI/results and proposal controls, execution records, and integrated tests for allowed/disallowed calls.
+- [x] **12.4 DONE** Connect validated Gemini selection to one read executor or clarification/unsupported output. Preserve original questions, reject forged arguments/actions, and recheck access after selection. Backend build and 59 scoped tests passed with controlled model decisions and real executor/database integration. [Guide](backend/docs/agent-step-4-tool-routing.md). Live intent evaluation remains Phase 16; HTTP/UI were delivered in 12.6.
+- [x] **12.5 DONE** Add durable owned/version-bound five-minute retry proposals, separate confirmation/cancel/receipt functions, atomic single-use claims and existing queue/lock coordination. Migration, Prisma validation, backend build and 86 scoped tests passed. [Guide](backend/docs/agent-step-5-confirmed-retry.md). Routing requires one explicit document ID; filename-only requests need clarification. HTTP/UI confirmation was delivered in 12.6.
+- [x] **12.6 DONE** Add authenticated Agent endpoints/screen, typed results, separate confirmation/cancel/status controls, private metadata records and proposal recovery. Migration, both builds, changed-file lint, Prisma validation, 100 backend and 37 distinct browser tests passed, including a real-auth/API/PostgreSQL/Redis Chrome journey with controlled model output. [Guide](backend/docs/agent-step-6-api-ui-verification.md).
 
 Validation: a document question and a data question use their intended tools;
 an unauthorized action is blocked. Real external actions require explicit authorization.
+
+**Phase 12 completion gate: PASSED on 2026-10-26 for the documented local flow.**
+Provider decisions/output and embeddings were controlled in the integrated journey;
+live routing accuracy and production evaluation remain Phase 16. Execution records
+store metadata, not recoverable agent answer bodies. The broader audit/retention system
+remains Phase 15; production session/rate-limit work remains Phase 14.
 
 ### Phase 13 — Dashboard and analytics: show useful counts
 
 Flow: **organization records -> count by date/status -> dashboard cards and charts**.
 
-- [ ] **13.1** Define metrics and the event data needed to calculate them.
+- [ ] **13.1 NEXT** Define metrics and the event data needed to calculate them.
 - [ ] **13.2** Add organization-scoped summary APIs for documents, failures, and questions.
 - [ ] **13.3** Add dashboard cards, date filtering, and usage charts.
 - [ ] **13.4** Validate counts against known fixtures and exclude other organizations.
@@ -370,7 +377,7 @@ Flow: **known test data -> full user journeys -> failure scenarios -> release ch
 - [ ] **16.1** Consolidate unit, API/database, Redis, and browser tests into repeatable commands.
 - [ ] **16.2** Test the real browser-to-backend flow with isolated accounts and documents.
 - [ ] **16.3** Test concurrent uploads, lost connections, stopped workers, and retry recovery.
-- [ ] **16.4** Evaluate answer correctness, citations, missing evidence, and conflicting documents.
+- [ ] **16.4** Evaluate live agent intent selection, unsupported filters/actions, answer correctness, citations, missing evidence, and conflicting documents.
 - [ ] **16.5** Run isolation/security checks and measure realistic performance limits.
 
 Validation: repeatable passing results and documented limits. Existing tests remain useful;
@@ -441,6 +448,7 @@ Useful existing evidence:
 - [12.3 Document counts, read-only snapshots, saved statuses and timeout verification](backend/docs/agent-step-3-document-counts.md)
 - [12.4 Gemini tool selection, strict decision parsing, orchestration and verification limits](backend/docs/agent-step-4-tool-routing.md)
 - [12.5 Durable retry proposals, separate confirmation, expiry and uncertain queue outcomes](backend/docs/agent-step-5-confirmed-retry.md)
+- [12.6 Agent screen/API, private execution records, integrated Chrome verification and Phase 12 completion](backend/docs/agent-step-6-api-ui-verification.md)
 
 Before advancing a step, check:
 
@@ -451,5 +459,5 @@ Before advancing a step, check:
 - [ ] Any remaining limitation is visible here.
 - [ ] The tracker has been updated and I know the next step.
 
-**Next lesson: 12.6 — connect agent endpoints and a screen for read results and
-proposal confirmation, record executions, and verify the integrated user flow.**
+**Next lesson: 13.1 — define each dashboard metric, its organization scope and
+meaning, and the stored data needed to calculate it accurately.**
