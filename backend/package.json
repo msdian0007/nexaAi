@@ -4,6 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "benchmark:query-embeddings": "npm run build && node scripts/benchmark-query-embeddings.cjs",
+    "test:query-cache": "npm run build && node --test --test-concurrency=2 tests/document.query-embedding.test.cjs tests/document.query-cache.integration.test.cjs tests/document.search.integration.test.cjs tests/agent.knowledge.integration.test.cjs tests/agent.routing.integration.test.cjs tests/security.review.integration.test.cjs tests/conversation.persistence.integration.test.cjs",
     "test:security-review": "npm run build && node --test --test-concurrency=2 tests/security.review.integration.test.cjs tests/security.secret-boundaries.test.cjs tests/rag.prompt.test.cjs tests/rag.response.test.cjs tests/agent.contracts.test.cjs tests/agent.routing.test.cjs tests/agent.routing.integration.test.cjs tests/agent.knowledge.integration.test.cjs tests/agent.retry.integration.test.cjs tests/document.processing.integration.test.cjs tests/document.status.integration.test.cjs tests/conversation.persistence.integration.test.cjs",
     "test:usage-limits": "npm run build && node --test --test-concurrency=2 tests/usage.admission.integration.test.cjs tests/api.boundary.integration.test.cjs tests/auth.session.integration.test.cjs tests/agent.http.integration.test.cjs tests/gemini.provider.test.cjs",
     "test:api-boundaries": "npm run test:sessions && node --test --test-concurrency=2 tests/api.boundary.integration.test.cjs tests/document.pipeline.e2e.test.cjs tests/document.reprocess.integration.test.cjs tests/document.deletion.integration.test.cjs tests/rag.query.integration.test.cjs",

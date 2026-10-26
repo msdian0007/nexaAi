@@ -1,5 +1,5 @@
 import prisma from "../config/database";
-import { generateEmbedding } from "./document.embedding";
+import { getQueryEmbedding } from "./document.query-embedding";
 
 // Initial retrieval cutoff; calibrate against representative document/question pairs.
 export const DEFAULT_MIN_SIMILARITY = 0.35;
@@ -23,7 +23,9 @@ export const searchDocumentChunks = async (
   if (!Number.isFinite(minSimilarity) || minSimilarity < 0 || minSimilarity > 1) {
     throw new Error("minSimilarity must be a number from 0 to 1");
   }
-  const embedding = await generateEmbedding(query);
+  // Reuse only text-to-vector computation. Always run scoped SQL below so an
+  // upload, reprocessing result, rename or deletion is reflected immediately.
+  const embedding = await getQueryEmbedding(organizationId, query);
   if (embedding.length !== 384 || !embedding.every(Number.isFinite) || !embedding.some(value => value !== 0)) {
     throw new Error("Invalid query embedding");
   }
