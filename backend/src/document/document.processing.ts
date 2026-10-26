@@ -103,10 +103,9 @@ export const processDocument = async (
           where: { id: documentId },
           data: {
             status: "FAILED",
-            errorMessage:
-              error instanceof Error
-                ? error.message
-                : "Document processing failed",
+            // Persist a safe category, not arbitrary parser/model/DB messages.
+            // BullMQ and the HTTP document view already sanitize their receipts.
+            errorMessage: "Document processing failed.",
           },
         });
         return { error };

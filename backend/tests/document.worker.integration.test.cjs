@@ -103,7 +103,10 @@ test('document worker processes isolated jobs with real infrastructure', { timeo
       assert.equal(await job.getState(), 'failed');
       assert.equal(job.failedReason, 'Document processing failed.');
       assert.equal(job.attemptsMade, 3);
-      assert.equal((await prisma.document.findUniqueOrThrow({ where: { id: broken.id } })).status, 'FAILED');
+      const failed = await prisma.document.findUniqueOrThrow({ where: { id: broken.id } });
+      assert.equal(failed.status, 'FAILED');
+      assert.equal(failed.errorMessage, 'Document processing failed.');
+      assert.equal(JSON.stringify({ reason: job.failedReason, stack: job.stacktrace, saved: failed.errorMessage }).includes(broken.storagePath), false);
 
       // Repair the fictional input and explicitly give the retained job a fresh budget.
       await fs.writeFile(broken.storagePath, 'Employees receive 18 days of annual leave.');

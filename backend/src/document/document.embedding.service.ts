@@ -45,10 +45,9 @@ export const embedDocumentChunks = async (
       );
 
     } catch (error) {
-      console.error(
-        `Failed to generate embedding for chunk ${chunk.chunkIndex}`,
-        error
-      );
+      // Raw model/database exceptions can contain document text, URLs or local
+      // credentials. Keep logs fixed; the caller still receives the failure.
+      console.error("Document chunk embedding failed.");
 
       await db.documentChunk.update({
         where: {

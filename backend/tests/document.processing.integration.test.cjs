@@ -101,7 +101,7 @@ test("a processing failure records FAILED and permits a later retry", async () =
     await assert.rejects(processDocument(document.id, document.organizationId), /Test extraction failure/);
     const failed = await prisma.document.findUniqueOrThrow({ where: { id: document.id } });
     assert.equal(failed.status, "FAILED");
-    assert.equal(failed.errorMessage, "Test extraction failure");
+    assert.equal(failed.errorMessage, "Document processing failed.");
     assert.equal(chunkCalls, 0);
     assert.equal(embeddingCalls, 0);
 

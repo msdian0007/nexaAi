@@ -28,6 +28,9 @@ export const searchDocuments = async (req: AuthenticatedRequest, res: Response) 
   try {
     await requireProcessingMembership(req.user!.userId, organizationId);
     const results = await searchDocumentChunks(organizationId, query.trim(), topK, minSimilarity);
+    // Embedding/retrieval can outlive a membership change. Recheck before sending
+    // document text; an old signed session must not bypass a removal mid-request.
+    await requireProcessingMembership(req.user!.userId, organizationId);
     const hasMatches = results.length > 0;
     const context = buildDocumentContext(results);
     return res.status(200).json({

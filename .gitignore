@@ -1,0 +1,7 @@
+# Credentials belong in local configuration, including frontend env files.
+.env
+.env.*
+!.env.example
+
+# Uploaded documents are private runtime data, not source code.
+/backend/uploads/
