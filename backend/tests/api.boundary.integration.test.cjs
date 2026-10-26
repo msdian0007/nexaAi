@@ -32,7 +32,9 @@ test('production API request boundaries, safe errors, origins and bounded upload
     for (const [userId, organizationId] of [[user, org], [outsider, foreign]]) await prisma.organizationMember.create({ data: { userId, organizationId, role: 'OWNER' } });
     const token = issueAuthToken({ ...context, role: 'OWNER' }).token;
     const foreignToken = issueAuthToken({ userId: outsider, organizationId: foreign, role: 'OWNER' }).token;
-    const app = createApiApp({ origins: [origin] });
+    // This suite exercises parsing/admission fields; rate policy has its own
+    // real-Redis suite so repeated malformed uploads cannot exhaust this fixture.
+    const app = createApiApp({ origins: [origin], admissionStore: { consume: async () => 0 } });
     app.locals.getDocumentQueue = async () => ({ enqueue: async job => { enqueued.push(job); return { accepted: true }; }, getState: async () => 'waiting' });
     server = app.listen(0, '127.0.0.1'); await once(server, 'listening');
     const base = `http://127.0.0.1:${server.address().port}/api/v1`;

@@ -1,6 +1,20 @@
 import { test, expect } from "../support/browser";
 
 const document = { id: 'doc-1', originalName: 'policy.txt', status: 'COMPLETED', updatedAt: '2026-10-05T09:00:00Z', errorMessage: null };
+
+test('rate-limited uploads keep the file and display a wait without claiming it was saved or retrying', async ({ page }) => {
+  let calls = 0;
+  await page.route('**/api/v1/documents/upload', route => {
+    calls++; return route.fulfill({ status: 429, headers: { 'Retry-After': '42', 'Access-Control-Expose-Headers': 'Retry-After' }, json: { success: false, code: 'RATE_LIMITED', message: 'PRIVATE' } });
+  });
+  await page.getByLabel('Select a document').setInputFiles({ name: 'policy.txt', mimeType: 'text/plain', buffer: Buffer.from('fixture text') });
+  await page.getByRole('button', { name: 'Upload document', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('Try again in 42 seconds');
+  await expect(page.getByRole('region', { name: 'Latest upload', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Upload document', exact: true })).toBeEnabled();
+  await expect(page.getByLabel('Select a document')).toHaveValue(/policy.txt$/);
+  expect(calls).toBe(1);
+});
 test.beforeEach(async ({ page }) => {
   await page.route('**/api/v1/documents?*', route => route.fulfill({ json: { success: true, data: {
     organizationId: 'o', documents: [], page: { limit: 10, hasMore: false, nextCursor: null },

@@ -5,17 +5,18 @@ Last updated: **2026-10-26**.
 ## START HERE: where we are
 
 **Current phase: Phase 14 — security, limits and caching.**
-**Last completed step: 14.2 — Validated API inputs, bounded uploads, safe errors, headers and frontend origins.**
-**Next implementation step: 14.3 — Login/chat/upload rate limits and usage budgets.**
+**Last completed step: 14.3 — Shared Redis rate limits and usage budgets, with safe retry guidance.**
+**Next implementation step: 14.4 — Review prompt injection, tool permissions, tenant isolation and secret handling.**
 
-Step 14.2 adds shared field allowlists, a 32 KiB JSON limit, exact frontend-origin
-rules, protective API headers and safe auth/fallback errors. Upload admission checks
-one file at most 10 MiB, matching type/extension and basic content, with safe cleanup,
-commit-uncertainty recovery and current membership checks. Both builds, lint/type and
-whitespace checks, 153 distinct backend tests, 10 utility tests and 110 distinct browser
-cases across regression/focused runs passed. [Explanation, examples, limits and validation details](backend/docs/security-step-2-api-boundaries.md).
-Phase 13 remains DONE for its local workflow. Phase 14 continues with rate limits and
-budgets in 14.3; wider security review, retention and production performance remain later.
+Step 14.3 adds atomic shared Redis counters before login/registration, Chat/search/
+agent requests and upload/direct retry/agent confirmation. Verified users share limits
+across tokens/workspaces; organization and application budgets bound admitted AI work.
+Blocked requests return safe retry guidance before model/file/queue writes. Builds,
+lint/type checks, 64 backend tests, 11 utility tests and 29 distinct browser cases across
+regression/focused runs passed. [Examples, flow diagrams, defaults and limits](backend/docs/security-step-3-rate-limits.md).
+Step 14.2's [API inputs, bounded uploads and safe responses](backend/docs/security-step-2-api-boundaries.md) remain in place.
+Phase 13 remains DONE for its local workflow. Wider security review, caching,
+retention and production performance remain later. Request budgets are not token costs.
 PDF/ZIP signatures are admission checks; full parsing remains in the worker.
 
 **Phase 11 is DONE for the verified local workflow.** A real Chrome journey passed:
@@ -162,8 +163,9 @@ job is retained. It does not guarantee that processing can never run twice after
 
 **What exists today:** Redis + producer + worker + preparation/recovery + queued uploads
 and automatic status checks, with latest-upload retry controls.
-**What comes next:** Phase 14.3 limits how often login/chat/upload actions can be
-attempted and bounds expensive work. Per-request size limits are already in place.
+**What exists now:** Phase 14.3 limits repeated login/chat/upload actions and
+shares document budgets with direct retries and agent confirmations. Phase 14.4
+next reviews prompts, tools, tenant isolation and secrets.
 
 ## 3. How we will work from now on
 
@@ -204,7 +206,7 @@ flowchart TD
     J --> K[11 Background processing - DONE locally]
     K --> L[Earlier gaps in Phases 4, 5 and 9 - DONE locally]
     L --> M[12 AI agents - DONE for documented local flow]
-    M --> N[13 Analytics dashboard DONE; 14.2 API boundaries DONE; NEXT 14.3 rate limits]
+    M --> N[13 Analytics dashboard DONE; 14.3 rate limits DONE; NEXT 14.4 security review]
     N --> O[14 Security and resource limits]
     O --> P[15 Monitoring and audit history]
     P --> Q[16 Full-system testing]
@@ -214,7 +216,7 @@ flowchart TD
 ```
 
 Text route: **1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 (done locally)
--> earlier gaps complete -> 12 (done for local flow) -> 13 (done for local flow) -> 14 (14.2 done; next: 14.3) -> 15 -> 16 -> 17 -> 18.**
+-> earlier gaps complete -> 12 (done for local flow) -> 13 (done for local flow) -> 14 (14.3 done; next: 14.4) -> 15 -> 16 -> 17 -> 18.**
 
 Some work was implemented in a different chronological order. We keep the original
 phase identities and explicitly return to unfinished features instead of hiding them.
@@ -264,7 +266,7 @@ flowchart LR
     C --> D[11.4 Recovery - DONE]
     D --> E[11.5 Upload and UI integration - DONE]
     E --> F[11.6 End-to-end validation - DONE]
-    F --> G[Local Phases 12 and 13 DONE; 14.2 DONE; NEXT 14.3 rate limits]
+    F --> G[Local Phases 12 and 13 DONE; 14.3 DONE; NEXT 14.4 security review]
     style G fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
 ```
 
@@ -312,7 +314,7 @@ flowchart LR
     C --> D[12.4 Tool choice or clarification - DONE]
     D --> E[12.5 Confirmed document retry - DONE]
     E --> F[12.6 HTTP, UI, execution records and integration checks - DONE]
-    F --> G[Local Phase 13 DONE; 14.2 DONE; NEXT 14.3 rate limits]
+    F --> G[Local Phase 13 DONE; 14.3 DONE; NEXT 14.4 security review]
     style G fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
 ```
 
@@ -347,7 +349,7 @@ flowchart LR
     A[13.1 Metric definitions and date validation - DONE] --> B[13.2 Summary API - DONE]
     B --> C[13.3 Cards, date controls and chart - DONE]
     C --> D[13.4 Known fixtures and isolation verification - DONE]
-    D --> E[14.2 API boundaries DONE; NEXT 14.3 rate limits]
+    D --> E[14.3 Rate limits DONE; NEXT 14.4 security review]
     style E fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
 ```
 
@@ -371,17 +373,18 @@ Flow: **request -> identity -> current permissions -> input/usage limits -> allo
 ```mermaid
 flowchart LR
     A[14.1 Session expiry, sign-out and membership - DONE] --> B[14.2 Validation, errors, headers and origins - DONE]
-    B --> C[14.3 Rate limits and budgets - NEXT]
-    C --> D[14.4 Tool, prompt and tenant review]
+    B --> C[14.3 Rate limits and budgets - DONE]
+    C --> D[14.4 Tool, prompt and tenant review - NEXT]
     D --> E[14.5 Measured scoped caching]
     E --> F[14.6 Security verification]
-    style C fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
+    style C fill:#d1e7dd,stroke:#146c43,color:#222
+    style D fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
 ```
 
 - [x] **14.1 DONE** Add unique token issuance/expiry metadata, idle expiry checks, immediate browser clearance and pending-request cancellation, durable per-token fingerprint revocation, current-role authorization and restricted membership recovery. Applied additive migration and generated client; schema/status, both builds, lint/type checks, 114 backend tests and 108 distinct browser cases across regression/focused checks passed. Final focused browser run: 10/10, including real logout receipt/replay denial. [Guide](backend/docs/security-step-1-session-lifecycle.md). Expired-revocation pruning remains retention work; already-accepted writes are not rolled back by sign-out.
 - [x] **14.2 DONE** Add production API factory/shared headers, exact CORS origins, bounded JSON, safe parser/fallback/auth errors, field allowlists, typed/byte-bounded auth inputs, multipart limits/type/content admission, current document-read/upload membership and serialized save/cleanup reconciliation. Both builds, lint/type/whitespace checks, 153 distinct backend tests, 10 utility tests and 110 distinct Chrome cases passed across regression/focused runs; real TXT worker/vector pipeline passed. [Guide](backend/docs/security-step-2-api-boundaries.md). Content signatures do not certify full PDF/DOCX validity or malware safety; ambiguous files require later operational reconciliation.
-- [ ] **14.3 NEXT** Add login/chat/upload rate limits and appropriate usage budgets.
-- [ ] **14.4** Review document prompt injection, tool permissions, tenant isolation, and secret handling.
+- [x] **14.3 DONE** Add atomic shared Redis attempt limits and user/organization/application request budgets before public auth and costly AI/document actions, including search and agent retry confirmation. Safe 429 wait guidance, closed admission during Redis outages, continued read/logout recovery, retained drafts/files and manual retry only after explicit rejection. Both builds, lint/type/whitespace checks, 64 backend tests, 11 utility tests and 29 distinct browser cases across regression/focused runs passed. [Guide](backend/docs/security-step-3-rate-limits.md). Budgets count admitted requests, not tokens/costs; worker resource limits, lifetime storage quotas and trusted deployment ingress remain separate work.
+- [ ] **14.4 NEXT** Review document prompt injection, tool permissions, tenant isolation, and secret handling.
 - [ ] **14.5** Add caching only for measured repeated work, with organization-specific keys and invalidation when documents change. Separate cache eviction needs from durable queue data.
 - [ ] **14.6** Verify attacks, expired credentials, role changes, and cross-organization requests are handled safely.
 
@@ -488,6 +491,7 @@ Useful existing evidence:
 - [13.4 Actual login/API/database dashboard verification, private activity, switching, revoked access and cleanup](frontend/docs/analytics-step-4-live-dashboard-verification.md)
 - [14.1 Session lifetime, server logout fingerprints, current roles, membership recovery and verification](backend/docs/security-step-1-session-lifecycle.md)
 - [14.2 API inputs, bounded uploads, safe errors, exact origins, headers and uncertainty-aware cleanup](backend/docs/security-step-2-api-boundaries.md)
+- [14.3 Shared rate counters, user/team/application budgets, safe waits and Redis outage behavior](backend/docs/security-step-3-rate-limits.md)
 
 Before advancing a step, check:
 
@@ -498,5 +502,5 @@ Before advancing a step, check:
 - [ ] Any remaining limitation is visible here.
 - [ ] The tracker has been updated and I know the next step.
 
-**Next lesson: 14.3 — explain rate limits and usage budgets, then bound repeated
-login/chat/upload requests and expensive work using scoped, testable rules.**
+**Next lesson: 14.4 — explain prompt injection with a document example, then review
+which tools can execute, whose data they can access and how secrets are kept private.**

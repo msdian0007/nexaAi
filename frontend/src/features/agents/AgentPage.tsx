@@ -166,7 +166,9 @@ export function AgentPage() {
     } catch (failure) {
       if (controller.signal.aborted) return;
       setError(
-        mutation
+        failure instanceof ApiError && ((failure.status === 429 && failure.code === "RATE_LIMITED") || (failure.status === 503 && failure.code === "USAGE_UNAVAILABLE"))
+          ? failure.message
+          : mutation
           ? "Could not confirm this action. Refresh proposal and document status before making a new request. This proposal will not be submitted again."
           : failure instanceof ApiError && failure.status === 403
             ? "Your access has changed. Check your current organization membership."
@@ -231,6 +233,14 @@ export function AgentPage() {
         await request(`/agents/proposals/${proposal.id}/${kind}`, {
           method: "POST",
           signal,
+        }).catch((failure: unknown) => {
+          // These explicit receipts prove admission rejected the action. Only
+          // that case permits another manual click; lost responses stay blocked.
+          if (!signal.aborted && failure instanceof ApiError && ((failure.status === 429 && failure.code === "RATE_LIMITED") || (failure.status === 503 && failure.code === "USAGE_UNAVAILABLE"))) {
+            attemptedProposals.current.delete(proposal.id);
+            setAttempted(false);
+          }
+          throw failure;
         }),
       );
       if (kind === "confirm") {

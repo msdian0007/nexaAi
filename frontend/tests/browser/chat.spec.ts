@@ -28,6 +28,18 @@ async function ask(page: Page, text = question) {
   await page.getByRole('button', { name: 'Ask question', exact: true }).click();
 }
 
+test('a rate-limited question stays available for manual retry and displays the wait', async ({ page }) => {
+  let calls = 0;
+  await page.route('**/api/v1/chat/query', route => {
+    calls++; return route.fulfill({ status: 429, json: { success: false, code: 'RATE_LIMITED', retryAfterSeconds: 24 } });
+  });
+  await ask(page);
+  await expect(page.getByRole('alert')).toContainText('Try again in 24 seconds');
+  await expect(page.getByLabel('Your question')).toHaveValue(question);
+  await expect(page.getByRole('button', { name: 'Ask question', exact: true })).toBeEnabled();
+  expect(calls).toBe(1);
+});
+
 test('sends a single trimmed question with token, blocks duplicates, and renders safe cited text', async ({ page }) => {
   let release!: () => void;
   const gate = new Promise<void>(resolve => { release = resolve; });

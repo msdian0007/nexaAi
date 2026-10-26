@@ -32,6 +32,25 @@ async function preview(page: Page) {
   await ask(page, `Retry ${documentId}`);
   await expect(page.getByRole('heading', { name: 'Review document retry' })).toBeVisible();
 }
+
+test('admission rejection shows the wait and permits only a manual confirmation retry', async ({ page }) => {
+  let calls = 0;
+  await page.route(`**/agents/proposals/${proposalId}/confirm`, route => {
+    calls++;
+    return calls === 1
+      ? route.fulfill({ status: 429, json: { success: false, code: 'RATE_LIMITED', retryAfterSeconds: 18 } })
+      : route.fulfill({ json: envelope({ tool: 'retry_document', data: { documentId, state: 'accepted' } }) });
+  });
+  await preview(page);
+  await page.getByRole('button', { name: 'Confirm retry', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('Try again in 18 seconds');
+  await expect(page.getByRole('button', { name: 'Confirm retry', exact: true })).toBeEnabled();
+  expect(calls).toBe(1);
+  await page.getByRole('button', { name: 'Confirm retry', exact: true }).click();
+  await expect(page.getByText('Retry accepted for background processing.', { exact: false })).toBeVisible();
+  expect(calls).toBe(2);
+  await expect(page.getByRole('button', { name: 'Confirm retry', exact: true })).toBeDisabled();
+});
 async function refreshRoutes(page: Page, state = 'CLAIMED', missing = false) {
   await page.route(`**/agents/proposals/${proposalId}`, route => route.fulfill({ json: { success: true, data: proposal(state) } }));
   await page.route(`**/agents/proposals/${proposalId}/document-status`, route => route.fulfill(missing

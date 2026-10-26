@@ -96,7 +96,9 @@ async function startDashboardFixture({ fullApi = false } = {}) {
       for (let i = 0; i < questionCount; i++) await message(c, i, 'USER', organizationId === org ? -1 : 0);
       for (let i = 0; i < requestCount; i++) await execution(userId, organizationId, organizationId === org ? 'FAILED' : 'SUCCEEDED', organizationId === org ? -1 : 0);
     }
-    const app = fullApi ? require('../../dist/src/api').createApiApp({ origins: ['http://127.0.0.1:4173'] }) : express();
+    // Existing dashboard/boundary journeys control allowance acceptance. The
+    // dedicated admission integration suite verifies real shared Redis counters.
+    const app = fullApi ? require('../../dist/src/api').createApiApp({ origins: ['http://127.0.0.1:4173'], admissionStore: { consume: async () => 0 } }) : express();
     if (fullApi) app.locals.getDocumentQueue = async () => { throw new Error('Fixture queue unavailable'); };
     else {
       app.use(cors()); app.use(express.json());

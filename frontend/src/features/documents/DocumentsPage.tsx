@@ -158,7 +158,11 @@ export function DocumentsPage() {
           /* Ignore malformed error data and show the generic message below. */
         }
       }
-      if (
+      if (failure instanceof ApiError && ((failure.status === 429 && failure.code === "RATE_LIMITED") || (failure.status === 503 && failure.code === "USAGE_UNAVAILABLE"))) {
+        // Admission rejection precedes saving/queuing. Keep the selected file
+        // so the user can retry manually after the displayed wait.
+        setError(failure.message);
+      } else if (
         kind !== "upload" &&
         failure instanceof ApiError &&
         failure.status === 404

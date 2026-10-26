@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "test:usage-limits": "npm run build && node --test --test-concurrency=2 tests/usage.admission.integration.test.cjs tests/api.boundary.integration.test.cjs tests/auth.session.integration.test.cjs tests/agent.http.integration.test.cjs tests/gemini.provider.test.cjs",
     "test:api-boundaries": "npm run test:sessions && node --test --test-concurrency=2 tests/api.boundary.integration.test.cjs tests/document.pipeline.e2e.test.cjs tests/document.reprocess.integration.test.cjs tests/document.deletion.integration.test.cjs tests/rag.query.integration.test.cjs",
     "dev": "ts-node-dev --respawn --transpile-only src/app.ts",
     "build": "tsc",

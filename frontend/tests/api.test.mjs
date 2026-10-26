@@ -2,6 +2,19 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createApiClient, ApiError } from '../src/services/api.ts';
 
+test('rate limits display bounded wait times without retrying or revealing server messages', async () => {
+  for (const [value, expected] of [['12', '12 seconds'], ['86400', '86400 seconds'], ['0', 'later'], ['999999999', 'later'], ['<script>PRIVATE</script>', 'later'], ['1.5', 'later']]) {
+    let calls = 0;
+    const client = createApiClient('https://backend.example', async () => {
+      calls++; return Response.json({ success: false, code: 'RATE_LIMITED', message: 'PRIVATE' }, { status: 429, headers: { 'Retry-After': value } });
+    });
+    await assert.rejects(client('/chat/query', { method: 'POST', body: { question: 'policy' } }), error => error.status === 429 && error.message.includes(expected) && !error.message.includes('PRIVATE'));
+    assert.equal(calls, 1);
+  }
+  const fallback = createApiClient('https://backend.example', async () => Response.json({ code: 'RATE_LIMITED', retryAfterSeconds: 35 }, { status: 429 }));
+  await assert.rejects(fallback('/chat/query'), error => error.message.includes('35 seconds'));
+});
+
 test('sends credentials as JSON, unwraps data, and keeps the token explicit', async () => {
   const client = createApiClient('https://backend.example/api/v1/', async (url, init) => {
     assert.equal(url, 'https://backend.example/api/v1/auth/login');

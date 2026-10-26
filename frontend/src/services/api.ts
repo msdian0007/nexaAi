@@ -81,6 +81,7 @@ export function createApiClient(
         // Known codes get actionable, locally written text. Never display a
         // server's arbitrary error message, even for upload/validation failures.
         const inputMessages: Record<string, string> = {
+          USAGE_UNAVAILABLE: "Request allowance verification is unavailable. Nothing was submitted. Please try again later.",
           ORIGIN_NOT_ALLOWED: "Open NexaAI from an allowed frontend address.",
           UPLOAD_TOO_LARGE: "The file must be 10 MiB or smaller.",
           UNSUPPORTED_FILE_TYPE: "Choose a PDF, DOCX, or TXT file with a matching file type.",
@@ -90,6 +91,11 @@ export function createApiClient(
           UPLOAD_SAVE_UNCONFIRMED: "File saving could not be confirmed. Refresh the document library before uploading again.",
         };
         const inputMessage = code && Object.prototype.hasOwnProperty.call(inputMessages, code) ? inputMessages[code] : undefined;
+        // Show bounded integer seconds rather than arbitrary server text.
+        const retryValue = response.headers.get("Retry-After") ?? (isRecord(payload) ? payload.retryAfterSeconds : undefined);
+        const retrySeconds = typeof retryValue === "number" ? retryValue : typeof retryValue === "string" && /^[0-9]{1,5}$/.test(retryValue) ? Number(retryValue) : 0;
+        const retryMessage = Number.isSafeInteger(retrySeconds) && retrySeconds >= 1 && retrySeconds <= 86400
+          ? `Too many requests. Try again in ${retrySeconds} seconds.` : "Too many requests. Please try again later.";
         // Backend auth handlers may return internal error messages. Use safe UI text.
         const message =
           response.status === 401
@@ -97,7 +103,7 @@ export function createApiClient(
             : response.status === 403
               ? "You do not have permission to perform this action."
               : response.status === 429
-                ? "Too many requests. Please try again later."
+                ? retryMessage
                 : response.status >= 500
                   ? "The service is currently unavailable. Please try again later."
                   : "The request could not be completed. Please check your details.";
