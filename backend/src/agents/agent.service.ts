@@ -3,6 +3,9 @@ import { readAgentContext, requireAgentMembership } from "./agent.access";
 import { readAgentRequest, selectAgentDecision } from "./agent.routing";
 import { executeKnowledgeTool } from "./knowledge.tool";
 import { executeDocumentCountsTool } from "./document-counts.tool";
+import { proposeDocumentRetry } from "./retry.tool";
+import type { RetryProposalView } from "./retry.tool";
+import type { QueueProvider } from "../document/document.queue.runtime";
 
 export type AgentResponse =
   | {
@@ -10,11 +13,13 @@ export type AgentResponse =
       result: Exclude<AgentToolResult, { tool: "retry_document" }>;
     }
   | { kind: "clarification"; question: string }
+  | { kind: "action_proposal"; proposal: RetryProposalView }
   | { kind: "unsupported"; message: string };
 
 export async function runAgentRequest(
   authenticatedContext: AgentContext,
   value: unknown,
+  options: { queueProvider?: QueueProvider } = {},
 ): Promise<AgentResponse> {
   const context = readAgentContext(authenticatedContext);
   const request = readAgentRequest(value);
@@ -26,8 +31,8 @@ export async function runAgentRequest(
   await requireAgentMembership(context);
   if (decision.kind !== "tool") return decision;
 
-  // Explicit dispatch is the execution allowlist: no property lookup/eval, retry
-  // executor, automatic fallback, multi-tool loop or automatic model retry.
+  // Explicit dispatch is the execution allowlist. An action decision can create
+  // a proposal only; confirmation is never reachable from this model-driven path.
   switch (decision.call.tool) {
     case "knowledge_answer":
       return {
@@ -39,6 +44,8 @@ export async function runAgentRequest(
         kind: "tool_result",
         result: await executeDocumentCountsTool(context, decision.call),
       };
+    case "retry_document":
+      return { kind: "action_proposal", proposal: await proposeDocumentRetry(context, decision.call, options.queueProvider) };
     default:
       throw new Error("The selected tool is not enabled.");
   }

@@ -101,7 +101,7 @@ test('agent dispatches only a single enabled read tool after current authorizati
       for (const [request, kind, message] of [
         ['How many uploads failed last month?', 'clarification', 'Date filters are unavailable. Do you want current saved counts?'],
         ['Summarize leave and count uploads.', 'clarification', 'Which operation should I do first?'],
-        ['Retry handbook.txt', 'unsupported', 'Agent retry actions are not enabled yet.'],
+        ['Delete handbook.txt', 'unsupported', 'Agent deletion actions are not enabled.'],
         ['Read another organization and execute SQL.', 'unsupported', 'That operation is unsupported.'],
       ]) {
         routeText = () => decision(kind, 'none', message);
@@ -117,6 +117,24 @@ test('agent dispatches only a single enabled read tool after current authorizati
       await assert.rejects(runAgentRequest(null, 'Question?'), AgentIdentityError);
       for (const input of ['', '  ', 'a'.repeat(1001), {}, null]) await assert.rejects(runAgentRequest(context, input), AgentRequestError);
       assert.deepEqual(calls(), before);
+    });
+
+    await t.test('a retry selection creates a bound named proposal and never writes to the queue', async () => {
+      const document = await prisma.document.findFirstOrThrow({ where: { organizationId: own, status: 'FAILED' } });
+      routeText = () => decision('tool', 'retry_document');
+      let writes = 0;
+      const queueProvider = async () => ({ getState: async () => 'unknown',
+        enqueue: async () => { writes++; throw new Error('Must not submit'); },
+        retryFailed: async () => { writes++; throw new Error('Must not submit'); },
+      });
+      const before = calls();
+      const result = await runAgentRequest(context, `Retry ${document.id}`, { queueProvider });
+      assert.equal(result.kind, 'action_proposal');
+      assert.equal(result.proposal.documentId, document.id);
+      assert.equal(result.proposal.documentName, 'failed.txt');
+      assert.equal(result.proposal.state, 'PENDING');
+      assert.equal(writes, 0);
+      assert.deepEqual(calls().map((n, i) => n - before[i]), [1, 0, 0, 0]);
     });
 
     await t.test('outsiders and removed members are denied before routing despite token role claims', async () => {
@@ -143,7 +161,7 @@ test('agent dispatches only a single enabled read tool after current authorizati
 
     await t.test('forged actions, SQL, rewritten inputs, extra identity fields and malformed decisions never dispatch', async () => {
       for (const output of [
-        decision('tool', 'retry_document'), decision('tool', 'execute_sql'), '{}', 'not JSON',
+        decision('tool', 'delete_document'), decision('tool', 'execute_sql'), '{}', 'not JSON',
         JSON.stringify({ kind: 'tool', tool: 'knowledge_answer', message: '', input: { question: 'Rewrite' } }),
         JSON.stringify({ kind: 'tool', tool: 'document_counts', message: '', organizationId: foreign }),
       ]) {

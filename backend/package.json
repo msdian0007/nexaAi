@@ -25,7 +25,8 @@
     "test:agent-contracts": "npm run build && node --test tests/agent.contracts.test.cjs",
     "test:agent-knowledge": "npm run build && node --test tests/agent.contracts.test.cjs tests/agent.knowledge.integration.test.cjs",
     "test:agent-counts": "npm run build && node --test tests/agent.contracts.test.cjs tests/agent.knowledge.integration.test.cjs tests/agent.document-counts.integration.test.cjs",
-    "test:agent-routing": "npm run build && node --test tests/agent.contracts.test.cjs tests/agent.knowledge.integration.test.cjs tests/agent.document-counts.integration.test.cjs tests/agent.routing.test.cjs tests/agent.routing.integration.test.cjs tests/gemini.provider.test.cjs"
+    "test:agent-routing": "npm run build && node --test tests/agent.contracts.test.cjs tests/agent.knowledge.integration.test.cjs tests/agent.document-counts.integration.test.cjs tests/agent.routing.test.cjs tests/agent.routing.integration.test.cjs tests/gemini.provider.test.cjs",
+    "test:agent-actions": "npm run test:agent-routing && node --test tests/agent.retry.integration.test.cjs tests/document.reprocess.integration.test.cjs"
   },
   "keywords": [],
   "author": "",

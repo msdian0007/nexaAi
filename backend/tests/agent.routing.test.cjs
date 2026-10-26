@@ -24,7 +24,7 @@ test('clarification and unsupported outcomes require a bounded message and no to
 
 test('rejects malformed, extra, multiple, executable and contradictory model decisions', () => {
   const invalid = [null, {}, 'not JSON', '```json\n{}\n```', 'x'.repeat(4001), 'null', '[]',
-    raw('tool', 'retry_document'), raw('tool', 'execute_sql'), raw('tool', '__proto__'), raw('tool', 'none'),
+    raw('tool', 'delete_document'), raw('tool', 'execute_sql'), raw('tool', '__proto__'), raw('tool', 'none'),
     raw('tool', 'knowledge_answer', 'Rewritten answer'), raw('unknown', 'none', 'Text'),
     raw('clarification', 'document_counts', 'Question?'), raw('unsupported', 'none', ''),
     raw('clarification', 'none', '  '), raw('clarification', 'none', 'a'.repeat(501)),
@@ -69,4 +69,14 @@ test('invalid routing errors do not echo raw model content', () => {
   const secret = 'secret-example-do-not-echo';
   assert.throws(() => parseRoutingDecision(JSON.stringify({ secret }), 'Question?'), error =>
     error.code === 'INVALID_AGENT_DECISION' && !error.message.includes(secret));
+});
+
+test('retry selection proposes only an explicit single ID; missing or multiple targets need clarification', () => {
+  const id = '11111111-1111-4111-8111-111111111111';
+  assert.deepEqual(parseRoutingDecision(raw('tool', 'retry_document'), `Retry ${id}`), {
+    kind: 'tool', call: { tool: 'retry_document', input: { documentId: id } },
+  });
+  for (const request of ['Retry handbook.txt', 'yes, confirmed', `Retry ${id} and ${id}`]) {
+    assert.equal(parseRoutingDecision(raw('tool', 'retry_document'), request).kind, 'clarification');
+  }
 });

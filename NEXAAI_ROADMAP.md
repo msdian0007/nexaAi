@@ -5,15 +5,15 @@ Last updated: **2026-10-26**.
 ## START HERE: where we are
 
 **Current phase: Phase 12 — AI agents.**
-**Last completed step: 12.4 — Select a tool or ask for clarification.**
-**Next implementation step: 12.5 — Add confirmed document-retry actions.**
+**Last completed step: 12.5 — Add confirmed document-retry actions.**
+**Next implementation step: 12.6 — Connect agent HTTP/UI, execution records, and integration checks.**
 
-Step 12.4 connects a Gemini routing decision to one enabled read tool, clarification,
-or an unsupported response. Strict parsing, original-question binding, and current
-membership checks surround selection. Actions are not executable through routing yet.
-[Routing flow, examples, provider calls, and verification limits](backend/docs/agent-step-4-tool-routing.md).
-The backend build and all 59 scoped tests passed. Model decisions were controlled;
-live classification accuracy was not evaluated. No agent endpoint is enabled yet.
+Step 12.5 adds durable, five-minute retry proposals and separate confirmation/cancel
+functions. Confirmation claims once, checks membership and document version/state,
+then submits background work. Uncertain acknowledgements never auto-repeat.
+[Proposal flow, states, migration, and examples](backend/docs/agent-step-5-confirmed-retry.md).
+The local migration, Prisma validation, backend build and all 86 scoped tests passed.
+Tests used isolated PostgreSQL fixtures/Redis queues. No agent endpoint is enabled yet.
 
 **Phase 11 is DONE for the verified local workflow.** A real Chrome journey passed:
 queued upload, separate worker, automatic status updates, failed-file retry, a cited
@@ -159,8 +159,8 @@ job is retained. It does not guarantee that processing can never run twice after
 
 **What exists today:** Redis + producer + worker + preparation/recovery + queued uploads
 and automatic status checks, with latest-upload retry controls.
-**What comes next:** Phase 12.5 adds a proposal and separate confirmation for retrying
-one saved document, with expiry, fresh access/state checks, and duplicate protection.
+**What comes next:** Phase 12.6 connects agent endpoints and screen, displays typed
+results and confirmation controls, records executions, and verifies the integrated flow.
 
 ## 3. How we will work from now on
 
@@ -200,7 +200,7 @@ flowchart TD
     I --> J[10 Saved conversation history]
     J --> K[11 Background processing - DONE locally]
     K --> L[Earlier gaps in Phases 4, 5 and 9 - DONE locally]
-    L --> M[12 AI agents - 12.4 DONE; NEXT 12.5 confirmed retry]
+    L --> M[12 AI agents - 12.5 DONE; NEXT 12.6 HTTP and UI]
     M --> N[13 Analytics dashboard]
     N --> O[14 Security and resource limits]
     O --> P[15 Monitoring and audit history]
@@ -211,7 +211,7 @@ flowchart TD
 ```
 
 Text route: **1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 (done locally)
--> earlier gaps complete -> 12 (12.4 done; next: 12.5) -> 13 -> 14 -> 15 -> 16 -> 17 -> 18.**
+-> earlier gaps complete -> 12 (12.5 done; next: 12.6) -> 13 -> 14 -> 15 -> 16 -> 17 -> 18.**
 
 Some work was implemented in a different chronological order. We keep the original
 phase identities and explicitly return to unfinished features instead of hiding them.
@@ -261,7 +261,7 @@ flowchart LR
     C --> D[11.4 Recovery - DONE]
     D --> E[11.5 Upload and UI integration - DONE]
     E --> F[11.6 End-to-end validation - DONE]
-    F --> G[Phases 4, 5 and 9 DONE; 12.4 DONE; NEXT 12.5 confirmed retry]
+    F --> G[Phases 4, 5 and 9 DONE; 12.5 DONE; NEXT 12.6 HTTP and UI]
     style G fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
 ```
 
@@ -307,17 +307,17 @@ flowchart LR
     A[12.1 Contracts and parser - DONE] --> B[12.2 Knowledge tool - DONE]
     B --> C[12.3 Document counts - DONE]
     C --> D[12.4 Tool choice or clarification - DONE]
-    D --> E[12.5 Confirmed document retry - NEXT]
-    E --> F[12.6 UI, execution records and integration checks]
-    style E fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
+    D --> E[12.5 Confirmed document retry - DONE]
+    E --> F[12.6 HTTP, UI, execution records and integration checks - NEXT]
+    style F fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
 ```
 
 - [x] **12.1 DONE** Define exact tool inputs/outputs and permission requirements; implement strict tool-call validation. Backend build and 11 contract tests passed. [Guide](backend/docs/agent-step-1-tool-contracts.md). These tests validate shapes and declared policy, not executor authorization.
 - [x] **12.2 DONE** Connect the knowledge executor to existing RAG with current membership checks before retrieval and after generation, strict inputs and server-owned settings. Backend build and 21 contract/integration tests passed, including real scoped vector retrieval and revoked access. [Guide](backend/docs/agent-step-2-knowledge-tool.md). Agent routing/UI remain later steps.
 - [x] **12.3 DONE** Add document counts with current membership and a scoped aggregate in one read-only snapshot, zero-filled status totals and database/transaction timeouts. Backend build and 32 agent tests passed, including real write rejection, slow-query cancellation and concurrent-insert consistency. [Guide](backend/docs/agent-step-3-document-counts.md). Counts describe saved database status, not live Redis state.
 - [x] **12.4 DONE** Connect validated Gemini selection to one read executor or clarification/unsupported output. Preserve original questions, reject forged arguments/actions, and recheck access after selection. Backend build and 59 scoped tests passed with controlled model decisions and real executor/database integration. [Guide](backend/docs/agent-step-4-tool-routing.md). Live classification evaluation and HTTP/UI integration remain later work.
-- [ ] **12.5 NEXT** Add one-document retry proposals, separate bound confirmation, expiry, fresh permission/state checks, and duplicate protection.
-- [ ] **12.6** Add UI/results, execution records, and tests for disallowed tool calls.
+- [x] **12.5 DONE** Add durable owned/version-bound five-minute retry proposals, separate confirmation/cancel/receipt functions, atomic single-use claims and existing queue/lock coordination. Migration, Prisma validation, backend build and 86 scoped tests passed. [Guide](backend/docs/agent-step-5-confirmed-retry.md). Routing requires one explicit document ID; filename-only requests need clarification. HTTP/UI confirmation remains 12.6.
+- [ ] **12.6 NEXT** Add agent HTTP routes, UI/results and proposal controls, execution records, and integrated tests for allowed/disallowed calls.
 
 Validation: a document question and a data question use their intended tools;
 an unauthorized action is blocked. Real external actions require explicit authorization.
@@ -440,6 +440,7 @@ Useful existing evidence:
 - [12.2 Knowledge executor, current access checks, scoped retrieval and citation verification](backend/docs/agent-step-2-knowledge-tool.md)
 - [12.3 Document counts, read-only snapshots, saved statuses and timeout verification](backend/docs/agent-step-3-document-counts.md)
 - [12.4 Gemini tool selection, strict decision parsing, orchestration and verification limits](backend/docs/agent-step-4-tool-routing.md)
+- [12.5 Durable retry proposals, separate confirmation, expiry and uncertain queue outcomes](backend/docs/agent-step-5-confirmed-retry.md)
 
 Before advancing a step, check:
 
@@ -450,5 +451,5 @@ Before advancing a step, check:
 - [ ] Any remaining limitation is visible here.
 - [ ] The tracker has been updated and I know the next step.
 
-**Next lesson: 12.5 — show a proposal for retrying one saved document, require a
-separate bound confirmation, and recheck membership and document state before queuing.**
+**Next lesson: 12.6 — connect agent endpoints and a screen for read results and
+proposal confirmation, record executions, and verify the integrated user flow.**

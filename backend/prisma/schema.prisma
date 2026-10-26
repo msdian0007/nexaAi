@@ -79,6 +79,7 @@ model OrganizationMember {
 
   // Conversation ownership uses this membership, not just an unrelated user ID.
   conversations Conversation[]
+  retryProposals AgentRetryProposal[]
 
   @@unique([userId, organizationId])
   @@index([organizationId])
@@ -90,6 +91,35 @@ enum DocumentStatus {
   PROCESSING
   COMPLETED
   FAILED
+}
+
+enum AgentRetryProposalState {
+  PENDING
+  CLAIMED
+  ACCEPTED
+  REJECTED
+  UNCERTAIN
+  CANCELLED
+}
+
+// This table authorizes only retry_document, never arbitrary model-selected writes.
+// Document identity/version are snapshots: deletion invalidates confirmation.
+model AgentRetryProposal {
+  id                String @id @default(uuid())
+  userId            String
+  organizationId    String
+  documentId        String
+  documentName      String
+  documentUpdatedAt DateTime
+  state             AgentRetryProposalState @default(PENDING)
+  createdAt         DateTime @default(now())
+  expiresAt         DateTime
+  consumedAt        DateTime?
+
+  owner OrganizationMember @relation(fields: [userId, organizationId], references: [userId, organizationId], onDelete: Cascade)
+
+  @@index([userId, organizationId, createdAt])
+  @@index([expiresAt])
 }
 
 model Document {
