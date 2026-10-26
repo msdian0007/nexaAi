@@ -14,6 +14,7 @@ import "./App.css";
 import { DocumentsPage } from "./features/documents/DocumentsPage";
 import { ChatPage } from "./features/chat/ChatPage";
 import { AgentPage } from "./features/agents/AgentPage";
+import { DashboardPage } from "./features/analytics/DashboardPage";
 import { OrganizationPage } from "./features/organization/OrganizationPage";
 import { MembersPage } from "./features/organization/MembersPage";
 import { SwitchOrganizationPage } from "./features/organization/SwitchOrganizationPage";
@@ -53,51 +54,6 @@ function AuthPage({ mode }: { mode: "login" | "register" }) {
         invitationToken={mode === "register" ? invitationToken : undefined}
       />
     </>
-  );
-}
-
-function Dashboard() {
-  const { session } = useAuth();
-  if (!session) return null;
-  return (
-    <section className="workspace" aria-labelledby="welcome-heading">
-      <p className="eyebrow">YOUR WORKSPACE</p>
-      <h1
-        id="welcome-heading"
-        tabIndex={-1}
-        ref={(element) => element?.focus()}
-      >
-        Welcome, {session.user.name}
-      </h1>
-      <p>You are signed in to {session.organization.name}.</p>
-      <dl className="account-details">
-        <div>
-          <dt>Email</dt>
-          <dd>{session.user.email}</dd>
-        </div>
-        <div>
-          <dt>Organization</dt>
-          <dd>{session.organization.name}</dd>
-        </div>
-        <div>
-          <dt>Role</dt>
-          <dd>{session.role}</dd>
-        </div>
-      </dl>
-      <div className="workspace-note">
-        <h2>Your knowledge workspace</h2>
-        <p>
-          Upload documents to prepare your organization’s knowledge for
-          questions.
-        </p>
-        <Link className="text-button" to="/documents">
-          Upload a document
-        </Link>{" "}
-        <Link className="text-button" to="/chat">
-          Ask a question
-        </Link>
-      </div>
-    </section>
   );
 }
 
@@ -165,7 +121,7 @@ function AppRoutes() {
             element={<AcceptInvitationPage />}
           />
           <Route element={<ProtectedRoute />}>
-            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/dashboard" element={<DashboardPage />} />
             <Route
               path="/organizations/switch"
               element={<SwitchOrganizationPage />}

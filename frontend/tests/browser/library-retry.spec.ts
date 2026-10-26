@@ -1,4 +1,4 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Page } from "../support/browser";
 const stamp = "2026-10-25T09:00:00Z";
 function doc(id: string, state: string) {
   return { id, organizationId: "o", originalName: `${id}.txt`, status: state === "READY" ? "COMPLETED" : state === "FAILED" ? "FAILED" : "UPLOADED",

@@ -5,15 +5,16 @@ Last updated: **2026-10-26**.
 ## START HERE: where we are
 
 **Current phase: Phase 13 — dashboard and analytics.**
-**Last completed step: 13.2 — Implement the scoped dashboard summary API.**
-**Next implementation step: 13.3 — Add dashboard cards, date controls and chart.**
+**Last completed step: 13.3 — Add dashboard cards, date controls and chart.**
+**Next implementation step: 13.4 — Verify the dashboard against known saved fixtures and isolation rules.**
 
-Step 13.2 implements `GET /api/v1/analytics/summary`: shared current document counts,
-your private retained activity, paired UTC dates and zero-filled daily groups.
-Membership and aggregates share one read-only database snapshot with timeouts.
-[API explanation, worked example, flow and verification](backend/docs/analytics-step-2-summary-api.md).
-The backend build and all 23 reported contract/integration tests passed. The new
-dashboard screen comes next in 13.3; full screen verification remains 13.4.
+Step 13.3 connects `/dashboard` to the summary API: shared current document cards,
+your private question/request cards, inclusive UTC date controls, daily chart and
+an expandable exact-values table. Loading/errors clear stale metrics; workspace
+changes cancel old reads. [Explanation, worked example and flow](frontend/docs/analytics-step-3-dashboard-screen.md).
+Frontend build, changed-file lint, new browser-test type checks and 97 isolated
+Chrome tests passed (10 dashboard checks). Actual API/database screen verification
+against known saved fixtures remains 13.4.
 
 **Phase 11 is DONE for the verified local workflow.** A real Chrome journey passed:
 queued upload, separate worker, automatic status updates, failed-file retry, a cited
@@ -159,8 +160,8 @@ job is retained. It does not guarantee that processing can never run twice after
 
 **What exists today:** Redis + producer + worker + preparation/recovery + queued uploads
 and automatic status checks, with latest-upload retry controls.
-**What comes next:** Phase 13.3 connects the verified summary API to dashboard
-cards, date controls and a chart with shared and personal metric labels.
+**What comes next:** Phase 13.4 checks the dashboard through the actual summary
+API against known database records, including private activity and another organization.
 
 ## 3. How we will work from now on
 
@@ -201,7 +202,7 @@ flowchart TD
     J --> K[11 Background processing - DONE locally]
     K --> L[Earlier gaps in Phases 4, 5 and 9 - DONE locally]
     L --> M[12 AI agents - DONE for documented local flow]
-    M --> N[13 Analytics dashboard - 13.2 DONE; NEXT 13.3 dashboard UI]
+    M --> N[13 Analytics dashboard - 13.3 DONE; NEXT 13.4 fixture verification]
     N --> O[14 Security and resource limits]
     O --> P[15 Monitoring and audit history]
     P --> Q[16 Full-system testing]
@@ -211,7 +212,7 @@ flowchart TD
 ```
 
 Text route: **1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 (done locally)
--> earlier gaps complete -> 12 (done for local flow) -> 13 (13.2 done; next: 13.3) -> 14 -> 15 -> 16 -> 17 -> 18.**
+-> earlier gaps complete -> 12 (done for local flow) -> 13 (13.3 done; next: 13.4) -> 14 -> 15 -> 16 -> 17 -> 18.**
 
 Some work was implemented in a different chronological order. We keep the original
 phase identities and explicitly return to unfinished features instead of hiding them.
@@ -261,7 +262,7 @@ flowchart LR
     C --> D[11.4 Recovery - DONE]
     D --> E[11.5 Upload and UI integration - DONE]
     E --> F[11.6 End-to-end validation - DONE]
-    F --> G[Local Phase 12 DONE; 13.2 DONE; NEXT 13.3 dashboard UI]
+    F --> G[Local Phase 12 DONE; 13.3 DONE; NEXT 13.4 fixture verification]
     style G fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
 ```
 
@@ -309,7 +310,7 @@ flowchart LR
     C --> D[12.4 Tool choice or clarification - DONE]
     D --> E[12.5 Confirmed document retry - DONE]
     E --> F[12.6 HTTP, UI, execution records and integration checks - DONE]
-    F --> G[13.2 Summary API DONE; NEXT 13.3 dashboard UI]
+    F --> G[13.3 Dashboard UI DONE; NEXT 13.4 fixture verification]
     style G fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
 ```
 
@@ -342,15 +343,15 @@ is capped at 90. Deleted records cannot support lifetime or immutable history to
 ```mermaid
 flowchart LR
     A[13.1 Metric definitions and date validation - DONE] --> B[13.2 Summary API - DONE]
-    B --> C[13.3 Cards, date controls and chart - NEXT]
-    C --> D[13.4 Known fixtures and isolation verification]
-    style C fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
+    B --> C[13.3 Cards, date controls and chart - DONE]
+    C --> D[13.4 Known fixtures and isolation verification - NEXT]
+    style D fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
 ```
 
 - [x] **13.1 DONE** Define current document totals/statuses, retained uploads, private saved questions and agent REQUEST outcomes; specify sources, UTC/exclusive dates, deletion limits and response scopes. Backend build and 10 contract/date tests passed. [Guide](backend/docs/analytics-step-1-metric-definitions.md). No API/database aggregation is implemented in this step.
 - [x] **13.2 DONE** Add authenticated summary API with current membership, shared documents, private user activity, one read-only snapshot, parameterized daily aggregates, zero-filled groups, bounded date ranges, timeouts and safe uncached errors. Backend build and 23 reported contract/integration tests passed against real PostgreSQL and HTTP. [Guide](backend/docs/analytics-step-2-summary-api.md). Response groups are bounded; large-organization performance is not benchmarked.
-- [ ] **13.3 NEXT** Add dashboard cards, date filtering, and usage charts.
-- [ ] **13.4** Validate counts against known fixtures and exclude other organizations.
+- [x] **13.3 DONE** Connect protected dashboard to summary API with scoped cards, inclusive UTC date filters, last-seven-days/reset/refresh controls, daily SVG chart and exact-values table. Validate response counts/dates, clear stale/error data, abort late reads, and reset on workspace changes. Frontend build, changed-file lint, new test type checks and 97 isolated Chrome tests passed, including 10 dashboard checks with controlled API responses. [Guide](frontend/docs/analytics-step-3-dashboard-screen.md).
+- [ ] **13.4 NEXT** Validate the actual dashboard/API counts against known saved fixtures and exclude other organizations and members' private activity.
 
 Example: uploading three documents, with one failure, shows three total and one failed.
 Token/cost estimates require actual usage data; they should not be invented from message counts.
@@ -465,6 +466,7 @@ Useful existing evidence:
 - [12.6 Agent screen/API, private execution records, integrated Chrome verification and Phase 12 completion](backend/docs/agent-step-6-api-ui-verification.md)
 - [13.1 Metric definitions, privacy scopes, retained-data limits, UTC dates and worked examples](backend/docs/analytics-step-1-metric-definitions.md)
 - [13.2 Summary API, database aggregation, shared/private counts, snapshot consistency and verification](backend/docs/analytics-step-2-summary-api.md)
+- [13.3 Dashboard cards, inclusive UTC dates, activity chart, exact values and browser verification](frontend/docs/analytics-step-3-dashboard-screen.md)
 
 Before advancing a step, check:
 
@@ -475,5 +477,5 @@ Before advancing a step, check:
 - [ ] Any remaining limitation is visible here.
 - [ ] The tracker has been updated and I know the next step.
 
-**Next lesson: 13.3 — connect the summary API to dashboard cards, UTC date controls
-and a chart, explaining shared document totals versus private retained activity.**
+**Next lesson: 13.4 — verify the dashboard through the actual authenticated summary
+API against known saved records, including organization and private-activity isolation.**

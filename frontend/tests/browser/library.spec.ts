@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../support/browser";
 
 const stamp = "2026-10-25T09:00:00Z";
 const item = (id: string, name: string, state = "READY", organizationId = "o") => ({

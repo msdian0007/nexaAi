@@ -1,4 +1,4 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Page } from "../support/browser";
 
 const secret = "a".repeat(43);
 const invitation = {

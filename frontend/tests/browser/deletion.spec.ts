@@ -1,4 +1,4 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Page } from "../support/browser";
 
 const row = { id: "document-1", organizationId: "o", originalName: "handbook.txt", status: "COMPLETED", processingState: "READY", canRetry: false,
   updatedAt: "2026-10-25T10:00:00Z", createdAt: "2026-10-25T09:00:00Z", size: 42, mimeType: "text/plain", errorMessage: null };

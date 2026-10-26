@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../support/browser";
 import type { Page } from "@playwright/test";
 
 const session = {

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from "../support/browser";
 
 const document = { id: 'doc-1', originalName: 'policy.txt', status: 'COMPLETED', updatedAt: '2026-10-05T09:00:00Z', errorMessage: null };
 test.beforeEach(async ({ page }) => {

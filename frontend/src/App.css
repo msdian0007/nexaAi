@@ -478,3 +478,125 @@ dd {
   min-height: auto;
   margin-right: 8px;
 }
+
+/* Keep cards and the chart within the page; only the exact-values table scrolls. */
+.dashboard-page {
+  max-width: none;
+  min-width: 0;
+}
+.dashboard-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 16px;
+}
+.dashboard-filters > div {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+.dashboard-filters button {
+  margin: 0;
+  min-height: 46px;
+}
+.dashboard-hint {
+  color: #53666e;
+  font-size: 14px;
+}
+.dashboard-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin: 24px 0;
+}
+.dashboard-card {
+  background: white;
+  border: 1px solid #dce5e7;
+  border-radius: 12px;
+  padding: 22px;
+  overflow-wrap: anywhere;
+}
+.dashboard-card h3 {
+  margin: 0;
+}
+.dashboard-card > p {
+  color: #53666e;
+  font-size: 14px;
+}
+.dashboard-number {
+  display: block;
+  font-size: 38px;
+  color: #126b63;
+  margin: 18px 0;
+}
+.dashboard-card dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 8px 0;
+}
+.dashboard-card dd {
+  margin: 0;
+  font-weight: 650;
+}
+.dashboard-activity {
+  min-width: 0;
+  margin: 32px 0;
+}
+.dashboard-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  list-style: none;
+  padding: 0;
+}
+.dashboard-legend li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dashboard-legend span {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.activity-chart {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: white;
+  border: 1px solid #dce5e7;
+  border-radius: 12px;
+}
+.activity-chart text {
+  font-size: 14px;
+  fill: #344c55;
+}
+.dashboard-values summary {
+  cursor: pointer;
+  padding: 16px 0;
+  font-weight: 600;
+}
+.dashboard-table-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+}
+.dashboard-values table {
+  border-collapse: collapse;
+  width: 100%;
+}
+.dashboard-values caption {
+  text-align: left;
+  padding: 12px 0;
+}
+.dashboard-values th,
+.dashboard-values td {
+  text-align: left;
+  padding: 12px;
+  border-bottom: 1px solid #dce5e7;
+}
+@media (max-width: 800px) {
+  .dashboard-cards {
+    grid-template-columns: 1fr;
+  }
+}

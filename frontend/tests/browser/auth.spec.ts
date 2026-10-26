@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../support/browser";
 
 const session = {
   token: "fictional-test-token",

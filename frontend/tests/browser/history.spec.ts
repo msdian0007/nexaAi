@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from "../support/browser";
 import { randomUUID } from 'node:crypto';
 
 const a = '11111111-1111-4111-8111-111111111111';

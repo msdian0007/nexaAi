@@ -1,4 +1,4 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Page } from "../support/browser";
 const a = "11111111-1111-4111-8111-111111111111";
 const b = "22222222-2222-4222-8222-222222222222";
 const stamp = "2026-10-25T09:00:00Z";

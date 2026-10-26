@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from "../support/browser";
 import type { Page } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
 const conversationId = '11111111-1111-4111-8111-111111111111';

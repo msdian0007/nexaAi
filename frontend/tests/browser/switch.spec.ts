@@ -1,4 +1,4 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Page } from "../support/browser";
 
 const first = { id: "o", name: "Support", slug: "support" };
 const second = { id: "sales", name: "Sales", slug: "sales" };

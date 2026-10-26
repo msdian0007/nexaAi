@@ -1,4 +1,4 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Page } from "../support/browser";
 
 function member(id: string, userId: string, role: string, name: string) {
   return { id, userId, organizationId: "o", role, user: { id: userId, name, email: `${name.toLowerCase()}@example.invalid` } };
