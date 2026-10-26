@@ -13,6 +13,8 @@ const {
   createDocumentQueue,
 } = require("../../dist/src/document/document.queue");
 const { createRedisConnection } = require("../../dist/src/config/redis");
+const { createAdmissionStore } = require("../../dist/src/http/usage.admission");
+let embeddingCalls = 0;
 const vector = [1, ...Array(383).fill(0)];
 const embeddingId =
   require.resolve("../../dist/src/document/document.embedding");
@@ -20,10 +22,11 @@ require.cache[embeddingId] = {
   id: embeddingId,
   filename: embeddingId,
   loaded: true,
-  exports: { generateEmbedding: async () => vector },
+  exports: { generateEmbedding: async () => { embeddingCalls++; return [...vector]; } },
 };
 
-async function startAgentFixture() {
+async function startAgentFixture({ fullApi = false } = {}) {
+  const initialEmbeddingCalls = embeddingCalls;
   const savedFactory = provider.createGeminiGenerator,
     savedAnswer = provider.generateGeminiText;
   const savedSecret = process.env.JWT_SECRET;
@@ -36,11 +39,24 @@ async function startAgentFixture() {
   const organizations = [],
     users = [];
   const queueName = `nexaai-agent-http-${randomUUID()}`;
+  const admissionPrefix = `nexaai-test-security-${randomUUID()}`;
+  const allowanceStore = createAdmissionStore({ prefix: admissionPrefix });
+  const unavailableStore = createAdmissionStore({ prefix: admissionPrefix, url: 'redis://127.0.0.1:1' });
   const email = `${user}@example.invalid`,
     password = "FixturePassword123!";
   let producer, inspector, connection, server;
   const calls = { selection: 0, answer: 0 };
-  const controls = { route: undefined, answer: undefined };
+  const controls = { route: undefined, answer: undefined, admissionUnavailable: false };
+  async function clearAllowances() {
+    if (!connection || connection.status !== 'ready') return;
+    let cursor = '0';
+    do {
+      const [next, keys] = await connection.scan(cursor, 'MATCH', `${admissionPrefix}:*`, 'COUNT', 100);
+      cursor = next;
+      if (!keys.every(key => key.startsWith(`${admissionPrefix}:`))) throw new Error('Unsafe admission cleanup');
+      if (keys.length) await connection.del(...keys);
+    } while (cursor !== '0');
+  }
   const decision = (kind, tool, message = "") =>
     JSON.stringify({ kind, tool, message });
   provider.createGeminiGenerator = () => async (messages) => {
@@ -71,6 +87,8 @@ async function startAgentFixture() {
   async function stop() {
     try {
       if (server) await new Promise((resolve) => server.close(resolve));
+      await Promise.all([allowanceStore.close(), unavailableStore.close()]);
+      await clearAllowances();
       await producer?.close();
       if (inspector) {
         assertQueueName();
@@ -88,6 +106,8 @@ async function startAgentFixture() {
           where: { id: { in: organizations } },
         });
         await prisma.user.deleteMany({ where: { id: { in: users } } });
+        if (await prisma.organization.count({ where: { id: { in: organizations } } }) ||
+            await prisma.user.count({ where: { id: { in: users } } })) throw new Error('Agent fixture record cleanup incomplete');
       } finally {
         await prisma.$disconnect();
       }
@@ -160,27 +180,34 @@ async function startAgentFixture() {
     await connection.connect();
     inspector = new Queue(queueName, { connection });
     inspector.on("error", () => {});
-    const app = express();
-    app.use(cors());
-    app.use(express.json());
+    // Full mode uses the shipped app, real scoped Redis admission and the
+    // fixture's isolated queue. Existing focused router tests keep their setup.
+    const app = fullApi ? require('../../dist/src/api').createApiApp({
+      origins: ['http://127.0.0.1:4173'],
+      admissionStore: { consume: rules => (controls.admissionUnavailable ? unavailableStore : allowanceStore).consume(rules) },
+    }) : express();
     app.locals.getDocumentQueue = async () => producer;
-    app.use("/api/v1/auth", require("../../dist/src/auth/auth.routes").default);
-    app.use(
-      "/api/v1/auth",
-      require("../../dist/src/auth/auth.protected.route").default,
-    );
-    app.use(
-      "/api/v1/agents",
-      require("../../dist/src/agents/agent.routes").default,
-    );
-    app.use(
-      "/api/v1/agents",
-      require("../../dist/src/agents/agent.routes").agentJsonError,
-    );
-    app.use(
-      "/api/v1/documents",
-      require("../../dist/src/document/document.routes").default,
-    );
+    if (!fullApi) {
+      app.use(cors());
+      app.use(express.json());
+      app.use("/api/v1/auth", require("../../dist/src/auth/auth.routes").default);
+      app.use(
+        "/api/v1/auth",
+        require("../../dist/src/auth/auth.protected.route").default,
+      );
+      app.use(
+        "/api/v1/agents",
+        require("../../dist/src/agents/agent.routes").default,
+      );
+      app.use(
+        "/api/v1/agents",
+        require("../../dist/src/agents/agent.routes").agentJsonError,
+      );
+      app.use(
+        "/api/v1/documents",
+        require("../../dist/src/document/document.routes").default,
+      );
+    }
     server = app.listen(0, "127.0.0.1");
     await once(server, "listening");
     const baseUrl = `http://127.0.0.1:${server.address().port}/api/v1`;
@@ -201,6 +228,9 @@ async function startAgentFixture() {
       inspector,
       controls,
       calls,
+      inferences: () => embeddingCalls - initialEmbeddingCalls,
+      allowances: allowanceStore,
+      clearAllowances,
       prisma,
       token,
       email,
@@ -215,7 +245,7 @@ async function startAgentFixture() {
 module.exports = { startAgentFixture };
 
 if (require.main === module)
-  void startAgentFixture()
+  void startAgentFixture({ fullApi: process.argv.includes('--full-api') })
     .then((fixture) => {
       // Only fixture identifiers/credentials go to the test parent; never real env settings.
       process.stdout.write(
@@ -231,8 +261,8 @@ if (require.main === module)
       async function stop() {
         if (stopping) return;
         stopping = true;
-        await fixture.stop();
-        process.exit(0);
+        try { await fixture.stop(); process.exit(0); }
+        catch { process.stderr.write('Agent fixture cleanup failed.\n'); process.exit(1); }
       }
       process.on("message", (message) => {
         if (message === "stop") void stop();

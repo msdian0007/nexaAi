@@ -7,8 +7,10 @@ test('Chrome completes real auth, counts, cited knowledge, cancellation, confirm
   const backend = fileURLToPath(new URL('../../../backend/', import.meta.url));
   const helper = fileURLToPath(new URL('../../../backend/tests/helpers/agent.http-fixture.cjs', import.meta.url));
   // The path starts at frontend/tests/browser; go up to the repository root.
-  const child = fork(helper, [], { cwd: backend, stdio: ['ignore', 'pipe', 'pipe', 'ipc'] });
-  const exited = new Promise<void>(resolve => child.once('exit', () => resolve()));
+  // Exercise the shipped app and real Redis rate/usage counters as well as the
+  // existing authenticated tools, private records and isolated document queue.
+  const child = fork(helper, ['--full-api'], { cwd: backend, stdio: ['ignore', 'pipe', 'pipe', 'ipc'] });
+  const exited = new Promise<number | null>(resolve => child.once('exit', code => resolve(code)));
   let closing = false;
   try {
     const fixture = await new Promise<{ baseUrl: string; email: string; password: string; retryId: string }>((resolve, reject) => {
@@ -34,7 +36,10 @@ test('Chrome completes real auth, counts, cited knowledge, cancellation, confirm
       const url = new URL(route.request().url());
       const target = `${fixture.baseUrl}${url.pathname.split('/api/v1')[1]}${url.search}`;
       try {
-        const response = await route.fetch({ url: target });
+        // Keep each proxy request on its own connection. Reusing an idle test
+        // socket can race the local server's keep-alive close under load. Never
+        // retry a failed transport automatically: it may already have written.
+        const response = await route.fetch({ url: target, headers: { ...route.request().headers(), connection: 'close' } });
         await route.fulfill({ response });
       } catch (error) {
         // Closing the page cancels its final metadata refresh. Keep the fixture
@@ -87,7 +92,11 @@ test('Chrome completes real auth, counts, cited knowledge, cancellation, confirm
     await page.close();
     if (child.connected) child.send('stop');
     let timer: ReturnType<typeof setTimeout> | undefined;
-    try { await Promise.race([exited, new Promise<void>(resolve => { timer = setTimeout(() => { child.kill(); resolve(); }, 20000); })]); }
-    finally { clearTimeout(timer); }
+    try {
+      const code = await Promise.race([exited, new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(() => reject(new Error('Agent fixture cleanup timed out')), 20000);
+      })]);
+      expect(code).toBe(0);
+    } finally { clearTimeout(timer); if (child.exitCode === null) child.kill(); }
   }
 });

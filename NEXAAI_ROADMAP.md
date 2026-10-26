@@ -4,24 +4,24 @@ Last updated: **2026-10-26**.
 
 ## START HERE: where we are
 
-**Current phase: Phase 14 — security, limits and caching.**
-**Last completed step: 14.5 — Measured repeated inference and added a bounded, organization-scoped question embedding cache.**
-**Next implementation step: 14.6 — Verify combined security behavior and recovery before Phase 15.**
+**Current phase: Phase 14 — DONE for the verified local workflow. Phase 15 is next.**
+**Last completed step: 14.6 — Verified combined session, permission, tenant, limit, tool and cache behavior.**
+**Next implementation step: 15.1 — Safe structured logs and identifiers linking requests to jobs.**
 
-Step 14.5 measured repeated question embedding: one local comparison had a median
-10.943 ms inference versus 0.040 ms warm lookup, with one inference for 13 cached
-requests. This is an embedding-stage measurement, not end-to-end answer latency.
-The cache retains at most 128 organization/profile/question vectors per API process
-for five minutes and shares simultaneous identical misses. Permissions, allowances,
-SQL retrieval, generation and saves still run through their existing paths. Fresh
-SQL reflects document changes without caching document-derived results. Backend
-build, 73 tests, the real-model benchmark and whitespace checks passed.
-[Examples, cache flow, measured results and limits](backend/docs/security-step-5-measured-caching.md).
+Step 14.6 adds a repeatable 36-suite security gate and a combined shipped-API test
+with real PostgreSQL, scoped Redis admission/queue state and a warm question cache.
+It verifies expired/revoked sessions, current roles, foreign IDs, private/racing
+confirmations, late membership removal, allowance exhaustion and recovery. The
+browser agent journey now uses the full API and real Redis limits. Final validation:
+311 backend tests, 113 distinct Chrome cases across regression/focused runs, 11
+utility tests, both builds, changed-test lint/type checks and whitespace checks.
+[Examples, combined flows, test corrections and evidence](backend/docs/security-step-6-combined-verification.md).
+The measured [bounded question cache](backend/docs/security-step-5-measured-caching.md) still searches current documents and does not cache permissions or answers.
 The earlier [trust-boundary review and secret-handling fixes](backend/docs/security-step-4-trust-boundaries.md) remain in place.
 Earlier [API boundaries](backend/docs/security-step-2-api-boundaries.md) and
 [request budgets](backend/docs/security-step-3-rate-limits.md) remain in place.
-Phase 13 remains DONE for its local workflow. Broader security verification,
-retention and deployment remain later. Structural checks do not prove factual grounding;
+Phases 13 and 14 are DONE for their verified local workflows. Monitoring, retention,
+live-model evaluation and deployment remain later. Structural checks do not prove factual grounding;
 earlier Git history still contains previous credential/upload copies.
 PDF/ZIP signatures are admission checks; full parsing remains in the worker.
 
@@ -173,7 +173,8 @@ and automatic status checks, with latest-upload retry controls.
 shares document budgets with direct retries and agent confirmations. Phase 14.4
 reviewed prompts, tools, tenant isolation and secrets. Phase 14.5 caches measured
 repeated question embedding work while searching current documents each time.
-Next, Phase 14.6 verifies the combined security and recovery behavior.
+Phase 14.6 verified the combined security/recovery behavior. Next, Phase 15.1
+introduces safe logs and identifiers linking HTTP requests to background jobs.
 
 ## 3. How we will work from now on
 
@@ -214,7 +215,7 @@ flowchart TD
     J --> K[11 Background processing - DONE locally]
     K --> L[Earlier gaps in Phases 4, 5 and 9 - DONE locally]
     L --> M[12 AI agents - DONE for documented local flow]
-    M --> N[13 Analytics dashboard DONE; 14.5 measured caching DONE; NEXT 14.6 verification]
+    M --> N[13 Dashboard and 14 Security DONE locally; NEXT 15.1 safe logs and identifiers]
     N --> O[14 Security and resource limits]
     O --> P[15 Monitoring and audit history]
     P --> Q[16 Full-system testing]
@@ -224,7 +225,7 @@ flowchart TD
 ```
 
 Text route: **1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 (done locally)
--> earlier gaps complete -> 12 (done for local flow) -> 13 (done for local flow) -> 14 (14.5 done; next: 14.6) -> 15 -> 16 -> 17 -> 18.**
+-> earlier gaps complete -> 12 (done for local flow) -> 13 (done for local flow) -> 14 (done for verified local flow) -> 15 (next: 15.1) -> 16 -> 17 -> 18.**
 
 Some work was implemented in a different chronological order. We keep the original
 phase identities and explicitly return to unfinished features instead of hiding them.
@@ -235,8 +236,8 @@ Future steps are a working plan; explain and record changes before implementing 
 | Phase | Status | Implemented scope | Remaining work or validation |
 | --- | --- | --- | --- |
 | 1 Foundation | DONE for local core | React, Express, TypeScript, Prisma, PostgreSQL/pgvector, health API. | Full app containers are Phase 17. |
-| 2 Authentication and isolation | DONE for core flow | Register, password login, signed tokens, organization membership and scoped document/chat access. | Broader security review remains in Phase 14. |
-| 3 Authentication screens | DONE for core flow | Login/register, protected navigation, sign out, safe request handling. | Refresh currently requires login again; production session design is Phase 14. |
+| 2 Authentication and isolation | DONE for core flow | Register, password login, signed tokens, organization membership and scoped document/chat access. | Phase 14 local security gate passed; live-model evaluation and deployment configuration remain later. |
+| 3 Authentication screens | DONE for core flow | Login/register, protected navigation, sign out, safe request handling. | Refresh still requires login again by the current in-memory session design; expiry/logout/recovery controls were verified in Phase 14. |
 | 4 Organization management | DONE for planned local flow | Current-role permissions, profile editing, member screens, expiring invitations and organization switching. | Email delivery is manual; persistent sessions and global token revocation remain later work. |
 | 5 Document management | DONE for planned local flow | Upload, background status, paginated library, coordinated owner/admin deletion, and retries for older saved files. | Pending deletion cleanup requires explicit Finish deletion. Cloud storage is Phase 18. |
 | 6 Document processing | DONE for core flow | Extract text and split it into chunks; invoked by the worker and verified in the live 11.6 journey. | Broader document-format evaluation remains in Phase 16. |
@@ -274,7 +275,7 @@ flowchart LR
     C --> D[11.4 Recovery - DONE]
     D --> E[11.5 Upload and UI integration - DONE]
     E --> F[11.6 End-to-end validation - DONE]
-    F --> G[Local Phases 12 and 13 DONE; 14.5 DONE; NEXT 14.6 verification]
+    F --> G[Local Phases 12 through 14 DONE; NEXT 15.1 safe logs and identifiers]
     style G fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
 ```
 
@@ -322,7 +323,7 @@ flowchart LR
     C --> D[12.4 Tool choice or clarification - DONE]
     D --> E[12.5 Confirmed document retry - DONE]
     E --> F[12.6 HTTP, UI, execution records and integration checks - DONE]
-    F --> G[Local Phase 13 DONE; 14.5 DONE; NEXT 14.6 verification]
+    F --> G[Local Phases 13 and 14 DONE; NEXT 15.1 safe logs and identifiers]
     style G fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
 ```
 
@@ -340,7 +341,8 @@ an unauthorized action is blocked. Real external actions require explicit author
 Provider decisions/output and embeddings were controlled in the integrated journey;
 live routing accuracy and production evaluation remain Phase 16. Execution records
 store metadata, not recoverable agent answer bodies. The broader audit/retention system
-remains Phase 15; production session/rate-limit work remains Phase 14.
+remains Phase 15. Local session/rate-limit controls passed Phase 14 verification;
+production configuration remains deployment work.
 
 ### Phase 13 — Dashboard and analytics: show useful counts
 
@@ -357,7 +359,7 @@ flowchart LR
     A[13.1 Metric definitions and date validation - DONE] --> B[13.2 Summary API - DONE]
     B --> C[13.3 Cards, date controls and chart - DONE]
     C --> D[13.4 Known fixtures and isolation verification - DONE]
-    D --> E[14.5 Measured caching DONE; NEXT 14.6 verification]
+    D --> E[Local Phase 14 DONE; NEXT 15.1 safe logs and identifiers]
     style E fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
 ```
 
@@ -384,11 +386,13 @@ flowchart LR
     B --> C[14.3 Rate limits and budgets - DONE]
     C --> D[14.4 Tool, prompt and tenant review - DONE]
     D --> E[14.5 Measured scoped caching - DONE]
-    E --> F[14.6 Security verification - NEXT]
+    E --> F[14.6 Security verification - DONE]
+    F --> G[15.1 Safe logs and request/job identifiers - NEXT]
     style C fill:#d1e7dd,stroke:#146c43,color:#222
     style D fill:#d1e7dd,stroke:#146c43,color:#222
     style E fill:#d1e7dd,stroke:#146c43,color:#222
-    style F fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
+    style F fill:#d1e7dd,stroke:#146c43,color:#222
+    style G fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
 ```
 
 - [x] **14.1 DONE** Add unique token issuance/expiry metadata, idle expiry checks, immediate browser clearance and pending-request cancellation, durable per-token fingerprint revocation, current-role authorization and restricted membership recovery. Applied additive migration and generated client; schema/status, both builds, lint/type checks, 114 backend tests and 108 distinct browser cases across regression/focused checks passed. Final focused browser run: 10/10, including real logout receipt/replay denial. [Guide](backend/docs/security-step-1-session-lifecycle.md). Expired-revocation pruning remains retention work; already-accepted writes are not rolled back by sign-out.
@@ -396,10 +400,17 @@ flowchart LR
 - [x] **14.3 DONE** Add atomic shared Redis attempt limits and user/organization/application request budgets before public auth and costly AI/document actions, including search and agent retry confirmation. Safe 429 wait guidance, closed admission during Redis outages, continued read/logout recovery, retained drafts/files and manual retry only after explicit rejection. Both builds, lint/type/whitespace checks, 64 backend tests, 11 utility tests and 29 distinct browser cases across regression/focused runs passed. [Guide](backend/docs/security-step-3-rate-limits.md). Budgets count admitted requests, not tokens/costs; worker resource limits, lifetime storage quotas and trusted deployment ingress remain separate work.
 - [x] **14.4 DONE** Review prompt/evidence separation, exact tool permissions, confirmation/owner/tenant checks, scoped SQL, worker receipts and browser output. Add post-retrieval search membership recheck, fixed embedding logs/new saved failure messages, ignored local Compose credentials, shared env/upload ignore rules, and removal of ten tracked uploads from the index while verifying unchanged local bytes. Both builds, 116 backend tests, 16 Chrome checks, Compose/current-credential compatibility and whitespace checks passed. [Guide](backend/docs/security-step-4-trust-boundaries.md). Controlled attacks verify code boundaries, not live-model intent or factual grounding. Earlier Git history/retained errors remain; production rotation, privilege/network hardening and parser resource controls need later work.
 - [x] **14.5 DONE** Measure repeated local inference and add organization/profile/exact-question vector reuse: 128-entry process-local LRU, five-minute non-sliding expiry, bounded single-flight bookkeeping, defensive copies and failure/invalid-vector rejection. Document-derived results, answers and permissions remain uncached; fresh scoped SQL handles document changes. No cache keys share durable Redis queue storage. Backend build, 73 tests, real embedding benchmark (10.943 ms uncached median, 0.040 ms warm lookup; one inference for 13 cached requests) and whitespace checks passed. [Guide](backend/docs/security-step-5-measured-caching.md). This is a small embedding-stage improvement; cache hit rate and whole-answer production latency remain unmeasured.
-- [ ] **14.6 NEXT** Verify attacks, expired credentials, role changes, and cross-organization requests are handled safely.
+- [x] **14.6 DONE** Add a deduplicated 36-suite security runner and full-API/real-Redis combined scenarios for warm-cache authorization, current roles, private/racing confirmations, session replay, cross-tenant denial, limits/outages and recovery. Upgrade the Chrome agent journey to shipped middleware and real scoped admission. Correct the short-TTL timing assumption and use fresh proxy connections without replay; enforce fixture cleanup success. Final gate: 311 backend tests passed in one complete rerun, 113 distinct Chrome cases passed across regression/focused checks (affected journey passed three repeats), 11 utility tests, both builds, changed-test lint/type and whitespace checks passed. [Guide](backend/docs/security-step-6-combined-verification.md).
 
 Example: an employee cannot obtain another company's document by changing its ID in a request.
 Security checks needed by an earlier feature are done with that feature; this phase is the broader review.
+
+**Phase 14 completion gate: PASSED on 2026-10-26 for the documented local workflow.**
+Combined authorization/admission/tool/cache boundaries and recovery were verified.
+Controlled model tests do not certify live-model grounding; previous Git history,
+production credential/network configuration, parser resource controls and operational
+retention retain the limitations documented in the step guides. Phase 15 has not
+started implementation yet.
 
 ### Phase 15 — Monitoring and audit history: understand what happened
 
@@ -408,7 +419,7 @@ user actions, such as a role change, for an authorized reviewer.
 
 Flow: **request/job -> identifier -> structured logs and timings -> metrics/audit view**.
 
-- [ ] **15.1** Add safe structured logs and identifiers linking requests to jobs.
+- [ ] **15.1 NEXT** Add safe structured logs and identifiers linking requests to jobs.
 - [ ] **15.2** Trace database, retrieval, generation, and worker timings.
 - [ ] **15.3** Add health/readiness checks, queue failure counts, and alert conditions.
 - [ ] **15.4** Store organization-scoped audit events for important actions and add an authorized view.
@@ -504,6 +515,7 @@ Useful existing evidence:
 - [14.3 Shared rate counters, user/team/application budgets, safe waits and Redis outage behavior](backend/docs/security-step-3-rate-limits.md)
 - [14.4 Prompt/tool/tenant trust boundaries, attack examples, secret configuration and verified fixes](backend/docs/security-step-4-trust-boundaries.md)
 - [14.5 Measured question embedding cache, tenant keys, expiry, current-document reads and benchmark](backend/docs/security-step-5-measured-caching.md)
+- [14.6 Combined security gate, real API/Redis scenarios, browser verification and recovery](backend/docs/security-step-6-combined-verification.md)
 
 Before advancing a step, check:
 
@@ -514,5 +526,5 @@ Before advancing a step, check:
 - [ ] Any remaining limitation is visible here.
 - [ ] The tracker has been updated and I know the next step.
 
-**Next lesson: 14.6 — verify the combined request/session/permission/tenant/limit/cache
-behavior and recovery before advancing to Phase 15 monitoring and audit history.**
+**Next lesson: 15.1 — explain safe structured logs and request/job identifiers,
+then connect an HTTP request with background work without logging private content.**

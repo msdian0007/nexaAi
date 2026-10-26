@@ -2,7 +2,7 @@
 // cleanup deletes only exact matching fixture keys, never shared queue data.
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { randomUUID } = require('node:crypto');
+const { randomUUID, createHash } = require('node:crypto');
 const { once } = require('node:events');
 const fs = require('node:fs/promises');
 const path = require('node:path');
@@ -89,9 +89,19 @@ test('shared admission counters and production API limits', { timeout: 120000 },
       for (const key of keys) assert.ok(await redis.pttl(key) > 0);
     });
     await t.test('a short real TTL expires and grants a fresh allowance', async () => {
-      const rules = [{ key: 'expiry', limit: 1, windowMs: 80 }];
+      // Do not require two Redis round trips to finish inside an 80 ms window:
+      // broad parallel runs can legitimately outlive that window. First prove
+      // denial with a normal TTL, then shorten only this fixture-owned key.
+      const rules = [{ key: 'expiry', limit: 1, windowMs: 60000 }];
       assert.equal(await store.consume(rules), 0); assert.ok(await second.consume(rules) > 0);
-      await new Promise(resolve => setTimeout(resolve, 120));
+      const key = `${prefix}:${createHash('sha256').update('expiry').digest('hex')}`;
+      assert.ok(await redis.pttl(key) > 0);
+      await redis.pexpire(key, 50);
+      const deadline = Date.now() + 5000;
+      while (await redis.exists(key)) {
+        assert.ok(Date.now() < deadline, 'Fixture key did not expire');
+        await new Promise(resolve => setTimeout(resolve, 25));
+      }
       assert.equal(await second.consume(rules), 0);
     });
     await t.test('stored keys contain no raw identifiers and survive closing/recreating the API connection', async () => {

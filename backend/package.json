@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "test:security": "npm run build && node scripts/verify-security.cjs",
     "benchmark:query-embeddings": "npm run build && node scripts/benchmark-query-embeddings.cjs",
     "test:query-cache": "npm run build && node --test --test-concurrency=2 tests/document.query-embedding.test.cjs tests/document.query-cache.integration.test.cjs tests/document.search.integration.test.cjs tests/agent.knowledge.integration.test.cjs tests/agent.routing.integration.test.cjs tests/security.review.integration.test.cjs tests/conversation.persistence.integration.test.cjs",
     "test:security-review": "npm run build && node --test --test-concurrency=2 tests/security.review.integration.test.cjs tests/security.secret-boundaries.test.cjs tests/rag.prompt.test.cjs tests/rag.response.test.cjs tests/agent.contracts.test.cjs tests/agent.routing.test.cjs tests/agent.routing.integration.test.cjs tests/agent.knowledge.integration.test.cjs tests/agent.retry.integration.test.cjs tests/document.processing.integration.test.cjs tests/document.status.integration.test.cjs tests/conversation.persistence.integration.test.cjs",
