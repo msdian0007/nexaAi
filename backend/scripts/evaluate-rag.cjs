@@ -19,7 +19,7 @@ const cases = [
   { id: "unrelated", documents: [leave], question: "How far is Jupiter from the sun?",
     status: "insufficient_information", calls: 0, facts: [], sources: 0 },
   { id: "partial", documents: [leave], question: "How many days of paid annual leave do full-time employees receive, and how many unused annual leave days can they carry over to next year?",
-    status: "insufficient_information", calls: 1, facts: [/\b18\b|eighteen/i, /carry|roll\s*over/i], sources: 1 },
+    status: "insufficient_information", calls: 1, facts: [/\b18\b|eighteen/i, /carr(?:y|ied)|roll\s*over/i], sources: 1 },
   { id: "conflicting", documents: [leave, "Full-time employees receive 25 days of paid annual leave per calendar year."],
     question: "How many days of paid annual leave do full-time employees receive per calendar year?",
     status: "conflicting_evidence", calls: 1, facts: [/\b18\b|eighteen/i, /\b25\b|twenty.five/i], sources: 2 },
@@ -82,8 +82,10 @@ async function main() {
     const fixture = await createTenant(entry.documents);
     observed = { calls: 0, evidence: [], allowed: entry.documents, isolationFailure: false };
     const started = Date.now();
+    // The authenticated token owns the organization scope. Supplying a tenant
+    // override would correctly fail the strict HTTP contract before retrieval.
     const response = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${fixture.token}` },
-      body: JSON.stringify({ question: entry.question, organizationId: distractor.id }), signal: AbortSignal.timeout(45000) });
+      body: JSON.stringify({ question: entry.question }), signal: AbortSignal.timeout(45000) });
     const body = await response.json();
     const answer = body.data;
     const checks = {

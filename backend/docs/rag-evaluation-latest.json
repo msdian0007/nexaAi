@@ -1,5 +1,5 @@
 {
-  "startedAt": "2026-10-04T07:59:20.963Z",
+  "startedAt": "2026-10-27T04:07:05.992Z",
   "model": "gemini-3.1-flash-lite",
   "scope": "Real HTTP, JWT, PostgreSQL retrieval, local embeddings and Gemini; pre-indexed fictional fixtures (upload pipeline excluded).",
   "reviewRequired": "Automated checks cover expected status, key facts, evidence isolation and source mapping. Read answers to assess factual support and limitations; a passing run is not proof of general reliability.",
@@ -13,7 +13,7 @@
       "expectedStatus": "answered",
       "httpStatus": 200,
       "providerCalls": 1,
-      "elapsedMs": 1954,
+      "elapsedMs": 1702,
       "evidence": [
         {
           "sourceId": "S1",
@@ -32,13 +32,16 @@
           "sources": [
             {
               "sourceId": "S1",
-              "chunkId": "1fb5cde8-6620-4194-bf34-4dfd6bebc36f",
-              "documentId": "10c6eecb-d896-41ae-a028-b583cd3dbbc7",
+              "chunkId": "b97b4374-13f8-42fc-999c-7f72f2fcb76b",
+              "documentId": "c4fffd91-4425-4ffd-9be8-f9f39647cbc4",
               "documentName": "fictional-policy-1.txt",
               "chunkIndex": 0,
               "similarity": 0.8760373518489601
             }
-          ]
+          ],
+          "conversationId": "5cd0737e-7929-4836-ba7c-a93dbe93eecc",
+          "userMessageId": "33e983be-c8cf-4852-8daa-2fdf2a3d2313",
+          "assistantMessageId": "11456826-ead9-4d4b-a469-2a8c787809e7"
         }
       },
       "checks": {
@@ -61,7 +64,7 @@
       "expectedStatus": "insufficient_information",
       "httpStatus": 200,
       "providerCalls": 0,
-      "elapsedMs": 26,
+      "elapsedMs": 48,
       "evidence": [],
       "response": {
         "success": true,
@@ -70,7 +73,10 @@
           "status": "insufficient_information",
           "answer": "I couldn't find enough information in your organization's indexed documents to answer this question.",
           "citations": [],
-          "sources": []
+          "sources": [],
+          "conversationId": "23c19977-abe7-4145-a718-2c1cb45ea130",
+          "userMessageId": "1563e2a9-2a5b-4a95-a9f3-fbec888bbc63",
+          "assistantMessageId": "6f3d187d-af65-4bd3-b645-d4eb083d70b5"
         }
       },
       "checks": {
@@ -93,7 +99,7 @@
       "expectedStatus": "insufficient_information",
       "httpStatus": 200,
       "providerCalls": 1,
-      "elapsedMs": 1401,
+      "elapsedMs": 2175,
       "evidence": [
         {
           "sourceId": "S1",
@@ -112,13 +118,16 @@
           "sources": [
             {
               "sourceId": "S1",
-              "chunkId": "c614ce07-feef-41a3-8806-0198a9d9d0b4",
-              "documentId": "1c26199c-5b81-42e7-ab36-39b4644167e7",
+              "chunkId": "c21cdbe2-3a78-44ad-8884-231f891aab29",
+              "documentId": "72b076b2-6541-4f32-99e8-02dea5a02832",
               "documentName": "fictional-policy-1.txt",
               "chunkIndex": 0,
               "similarity": 0.8092928869796612
             }
-          ]
+          ],
+          "conversationId": "2240ba6d-16b4-4bf4-beae-98993a0852f8",
+          "userMessageId": "4917455d-bb7a-4e33-a1b9-0bfead48f6bf",
+          "assistantMessageId": "dadfd19b-a499-4bea-9932-77824a0a5e57"
         }
       },
       "checks": {
@@ -142,7 +151,7 @@
       "expectedStatus": "conflicting_evidence",
       "httpStatus": 200,
       "providerCalls": 1,
-      "elapsedMs": 1526,
+      "elapsedMs": 4405,
       "evidence": [
         {
           "sourceId": "S1",
@@ -158,7 +167,7 @@
         "data": {
           "question": "How many days of paid annual leave do full-time employees receive per calendar year?",
           "status": "conflicting_evidence",
-          "answer": "There is a conflict in the provided evidence regarding the number of paid annual leave days for full-time employees. One source states that full-time employees receive 25 days of paid annual leave per calendar year [S1], while another source states that they receive 18 days per calendar year [S2].",
+          "answer": "There is conflicting information regarding the amount of paid annual leave full-time employees receive. One source states that full-time employees receive 25 days of paid annual leave per calendar year [S1], while another source states they receive 18 days [S2].",
           "citations": [
             "S1",
             "S2"
@@ -166,21 +175,24 @@
           "sources": [
             {
               "sourceId": "S1",
-              "chunkId": "29a787ce-e326-432a-a49a-d01aa6da6715",
-              "documentId": "f123f8de-3933-4439-8999-9b6c98e97011",
+              "chunkId": "2444a5de-2050-4aa4-8cd8-231b7499a1b2",
+              "documentId": "05d64687-66a9-4d01-a194-4aa773e6e2dd",
               "documentName": "fictional-policy-2.txt",
               "chunkIndex": 0,
               "similarity": 0.8792013597965195
             },
             {
               "sourceId": "S2",
-              "chunkId": "54d1d107-7f75-422c-b26a-d8485d7437ac",
-              "documentId": "035f5665-7975-4844-9fff-6c2c61a30896",
+              "chunkId": "26d9fbe9-8385-4652-94c0-52dab7ba9cb9",
+              "documentId": "f16b7a83-0876-4243-a531-b998c310fb58",
               "documentName": "fictional-policy-1.txt",
               "chunkIndex": 0,
               "similarity": 0.8760373518489601
             }
-          ]
+          ],
+          "conversationId": "5e6deea6-0c3e-422f-a3ac-62ba85a45412",
+          "userMessageId": "59983ee9-677d-46c1-8e3d-1b6d23f5d183",
+          "assistantMessageId": "98642653-73ac-4897-b110-78a25636755b"
         }
       },
       "checks": {
@@ -196,6 +208,6 @@
     }
   ],
   "cleanupCompleted": true,
-  "completedAt": "2026-10-04T07:59:27.303Z",
+  "completedAt": "2026-10-27T04:07:15.612Z",
   "passed": true
 }
