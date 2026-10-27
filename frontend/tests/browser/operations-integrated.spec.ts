@@ -1,0 +1,32 @@
+import { test, expect } from '../support/dashboard-live';
+test.use({ fullApi: true });
+test.setTimeout(90000);
+
+test('an owner sees scoped degradation alerts and the real audit record for a profile change', async ({ page, fixture: f }) => {
+  await page.goto('/login');
+  await page.getByLabel('Email address').fill(f.email);
+  await page.getByLabel('Password', { exact: true }).fill(f.password);
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await page.getByRole('link', { name: 'Operations', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Operations and audit history' })).toBeVisible();
+  await expect(page.getByText('4 saved documents; 1 have a failed status.', { exact: true })).toBeVisible();
+  await expect(page.getByLabel('Operational alerts')).toContainText('document queue is unavailable');
+  await expect(page.getByText('No recorded actions.', { exact: true })).toBeVisible();
+  await page.getByRole('link', { name: 'Organization', exact: true }).click();
+  await page.getByLabel('Organization display name').fill('Operations fixture renamed');
+  const changed = page.waitForResponse(response => response.url().endsWith('/organizations/profile') && response.request().method() === 'PATCH');
+  await page.getByRole('button', { name: 'Save organization name', exact: true }).click();
+  const response = await changed; expect(response.status()).toBe(200);
+  const requestId = response.headers()['x-request-id']; expect(requestId).toMatch(/^[0-9a-f-]{36}$/);
+  await page.getByRole('link', { name: 'Operations', exact: true }).click();
+  await expect(page.getByRole('cell', { name: 'Organization profile changed', exact: true })).toBeVisible();
+  await expect(page.getByRole('cell', { name: requestId, exact: true })).toBeVisible();
+  await expect(page.locator('tbody')).not.toContainText(f.email);
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await f.control('member');
+  await page.getByRole('button', { name: 'Refresh operations', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('current owner or administrator');
+  await expect(page.locator('tbody')).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Document processing' })).toHaveCount(0);
+});

@@ -1,28 +1,33 @@
 # NexaAI: learning guide, phase roadmap, and progress tracker
 
-Last updated: **2026-10-26**.
+Last updated: **2026-10-27**.
 
 ## START HERE: where we are
 
-**Current phase: Phase 14 — DONE for the verified local workflow. Phase 15 is next.**
-**Last completed step: 14.6 — Verified combined session, permission, tenant, limit, tool and cache behavior.**
-**Next implementation step: 15.1 — Safe structured logs and identifiers linking requests to jobs.**
+**Current phase: Phase 15 - DONE for the verified local workflow.**
+**Last completed phase: 15.1-15.5 - Monitoring, timing, health checks and audit history.**
+**Next implementation: the entire Phase 16 (16.1-16.5), full-system testing.**
 
-Step 14.6 adds a repeatable 36-suite security gate and a combined shipped-API test
-with real PostgreSQL, scoped Redis admission/queue state and a warm question cache.
-It verifies expired/revoked sessions, current roles, foreign IDs, private/racing
-confirmations, late membership removal, allowance exhaustion and recovery. The
-browser agent journey now uses the full API and real Redis limits. Final validation:
-311 backend tests, 113 distinct Chrome cases across regression/focused runs, 11
-utility tests, both builds, changed-test lint/type checks and whitespace checks.
-[Examples, combined flows, test corrections and evidence](backend/docs/security-step-6-combined-verification.md).
-The measured [bounded question cache](backend/docs/security-step-5-measured-caching.md) still searches current documents and does not cache permissions or answers.
-The earlier [trust-boundary review and secret-handling fixes](backend/docs/security-step-4-trust-boundaries.md) remain in place.
-Earlier [API boundaries](backend/docs/security-step-2-api-boundaries.md) and
-[request budgets](backend/docs/security-step-3-rate-limits.md) remain in place.
-Phases 13 and 14 are DONE for their verified local workflows. Monitoring, retention,
-live-model evaluation and deployment remain later. Structural checks do not prove factual grounding;
-earlier Git history still contains previous credential/upload copies.
+Phase 15 connects HTTP requests to background jobs using server-generated identifiers,
+records safe timings, separates liveness from dependency readiness, and adds an
+owner/admin Operations screen with organization-scoped queue alerts and audit history.
+Important action records commit with their database changes. A real failed job was
+traced across three attempts without exposing the private content/path/secret canary.
+
+Validation: the expanded backend gate passed 321 tests; final focused checks passed
+following small refinements. Chrome regression passed 116 cases initially; its one
+pagination-fixture failure was corrected and all four Operations cases then passed
+(117 distinct cases covered). Twelve utility tests, both builds and changed-file
+lint/type checks passed. The audit migration was applied locally. Retention remains
+dry-run by default; no cleanup was applied. The phase was subsequently split into
+five local commits (15.1-15.5) at the user's request; no push was performed.
+
+[Phase 15 explanation, examples, diagrams and validation](backend/docs/phase-15-monitoring-and-audit.md).
+[Step-sized commit plan](backend/docs/phase-15-commit-plan.md).
+The [Phase 14 security evidence](backend/docs/security-step-6-combined-verification.md)
+and [bounded question cache](backend/docs/security-step-5-measured-caching.md) remain
+applicable. Live model quality, realistic load and production deployment remain
+unverified. Previous Git history still contains earlier credential/upload copies.
 PDF/ZIP signatures are admission checks; full parsing remains in the worker.
 
 **Phase 11 is DONE for the verified local workflow.** A real Chrome journey passed:
@@ -173,8 +178,9 @@ and automatic status checks, with latest-upload retry controls.
 shares document budgets with direct retries and agent confirmations. Phase 14.4
 reviewed prompts, tools, tenant isolation and secrets. Phase 14.5 caches measured
 repeated question embedding work while searching current documents each time.
-Phase 14.6 verified the combined security/recovery behavior. Next, Phase 15.1
-introduces safe logs and identifiers linking HTTP requests to background jobs.
+Phase 14.6 verified combined security/recovery behavior. Phase 15 added safe logs,
+request/job identifiers, timings, health checks and scoped audit history. The next
+implementation covers the entire Phase 16.
 
 ## 3. How we will work from now on
 
@@ -183,16 +189,21 @@ this file uses its final **18-phase Recommended Implementation Order**. Existing
 named `redis-step-1` and `redis-step-2` correspond to **11.1** and **11.2** here.
 Older filenames keep their names. Their numbers are not new phase numbers.
 
-For each step:
+**Workflow updated on 2026-10-27: implement one complete phase at a time.**
+The numbered steps remain learning/review units and future commit topics; they
+are no longer separate implementation stopping points.
 
-1. State the phase and step number, and point to its position in the diagram.
+For each phase:
+
+1. State the phase and its included steps, and point to its position in the diagram.
 2. Explain the problem in plain language with a document or chat example.
 3. Define any new tool or term before using it.
 4. Explain the input, the action, and the expected result.
-5. Implement only that step, with comments explaining important code.
+5. Implement every planned step in that phase, with comments explaining important code.
 6. Test it and explain what the test proves and what remains unverified.
 7. Update this file's status, current pointer, and evidence links.
-8. Give a simple validation walkthrough, then stop for review before the next step.
+8. Give a validation walkthrough and step-sized commit plan, then stop before the next phase.
+9. Do not commit automatically; commits can be created step by step later when requested.
 
 Status meanings: **DONE** = implemented and verified for the stated scope;
 **PARTIAL** = some features exist but listed work remains; **NEXT** = next step;
@@ -215,23 +226,23 @@ flowchart TD
     J --> K[11 Background processing - DONE locally]
     K --> L[Earlier gaps in Phases 4, 5 and 9 - DONE locally]
     L --> M[12 AI agents - DONE for documented local flow]
-    M --> N[13 Dashboard and 14 Security DONE locally; NEXT 15.1 safe logs and identifiers]
-    N --> O[14 Security and resource limits]
-    O --> P[15 Monitoring and audit history]
-    P --> Q[16 Full-system testing]
+    M --> N[13 Dashboard - DONE locally]
+    N --> O[14 Security and resource limits - DONE locally]
+    O --> P[15 Monitoring and audit history - DONE locally]
+    P --> Q[16 Full-system testing - NEXT entire phase]
     Q --> R[17 Application containers and automated checks]
     R --> S[18 Deployment and production validation]
-    style N fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
+    style Q fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
 ```
 
 Text route: **1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 (done locally)
--> earlier gaps complete -> 12 (done for local flow) -> 13 (done for local flow) -> 14 (done for verified local flow) -> 15 (next: 15.1) -> 16 -> 17 -> 18.**
+-> earlier gaps complete -> 12 (done for local flow) -> 13 (done for local flow) -> 14 (done for verified local flow) -> 15 (done for verified local flow) -> 16 (next: entire phase) -> 17 -> 18.**
 
 Some work was implemented in a different chronological order. We keep the original
 phase identities and explicitly return to unfinished features instead of hiding them.
 Future steps are a working plan; explain and record changes before implementing them.
 
-## 5. Phases 1–10: built foundations and visible gaps
+## 5. Phases 1â€“10: built foundations and visible gaps
 
 | Phase | Status | Implemented scope | Remaining work or validation |
 | --- | --- | --- | --- |
@@ -275,7 +286,7 @@ flowchart LR
     C --> D[11.4 Recovery - DONE]
     D --> E[11.5 Upload and UI integration - DONE]
     E --> F[11.6 End-to-end validation - DONE]
-    F --> G[Local Phases 12 through 14 DONE; NEXT 15.1 safe logs and identifiers]
+    F --> G[Local Phases 12 through 15 DONE; NEXT entire Phase 16]
     style G fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
 ```
 
@@ -303,7 +314,7 @@ future library recovery. See the evidence guides for retention and recovery limi
 
 ## 7. Future phases and steps
 
-### Phase 12 — AI agents: choose and use an appropriate tool
+### Phase 12 â€” AI agents: choose and use an appropriate tool
 
 An agent combines a model with permitted tools. Example: a policy question uses document
 search; a question about upload counts uses an approved data query. Tools and boundaries
@@ -323,7 +334,7 @@ flowchart LR
     C --> D[12.4 Tool choice or clarification - DONE]
     D --> E[12.5 Confirmed document retry - DONE]
     E --> F[12.6 HTTP, UI, execution records and integration checks - DONE]
-    F --> G[Local Phases 13 and 14 DONE; NEXT 15.1 safe logs and identifiers]
+    F --> G[Local Phases 13 through 15 DONE; NEXT entire Phase 16]
     style G fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
 ```
 
@@ -341,10 +352,10 @@ an unauthorized action is blocked. Real external actions require explicit author
 Provider decisions/output and embeddings were controlled in the integrated journey;
 live routing accuracy and production evaluation remain Phase 16. Execution records
 store metadata, not recoverable agent answer bodies. The broader audit/retention system
-remains Phase 15. Local session/rate-limit controls passed Phase 14 verification;
+was delivered in Phase 15. Local session/rate-limit controls passed Phase 14 verification;
 production configuration remains deployment work.
 
-### Phase 13 — Dashboard and analytics: show useful counts
+### Phase 13 â€” Dashboard and analytics: show useful counts
 
 Flow: **organization records -> count by date/status -> dashboard cards and charts**.
 
@@ -359,7 +370,7 @@ flowchart LR
     A[13.1 Metric definitions and date validation - DONE] --> B[13.2 Summary API - DONE]
     B --> C[13.3 Cards, date controls and chart - DONE]
     C --> D[13.4 Known fixtures and isolation verification - DONE]
-    D --> E[Local Phase 14 DONE; NEXT 15.1 safe logs and identifiers]
+    D --> E[Local Phases 14 and 15 DONE; NEXT entire Phase 16]
     style E fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
 ```
 
@@ -376,7 +387,7 @@ Known records matched real authenticated API results and rendered cards/table. T
 new verification seeded database records directly; it did not rerun upload extraction,
 model generation or Redis processing. Large-organization performance remains unmeasured.
 
-### Phase 14 — Security, limits, and caching
+### Phase 14 â€” Security, limits, and caching
 
 Flow: **request -> identity -> current permissions -> input/usage limits -> allowed operation**.
 
@@ -387,12 +398,13 @@ flowchart LR
     C --> D[14.4 Tool, prompt and tenant review - DONE]
     D --> E[14.5 Measured scoped caching - DONE]
     E --> F[14.6 Security verification - DONE]
-    F --> G[15.1 Safe logs and request/job identifiers - NEXT]
+    F --> G[15 Monitoring and audit history - DONE]
+    G --> H[16 Full-system testing - NEXT entire phase]
     style C fill:#d1e7dd,stroke:#146c43,color:#222
     style D fill:#d1e7dd,stroke:#146c43,color:#222
     style E fill:#d1e7dd,stroke:#146c43,color:#222
     style F fill:#d1e7dd,stroke:#146c43,color:#222
-    style G fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
+    style H fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
 ```
 
 - [x] **14.1 DONE** Add unique token issuance/expiry metadata, idle expiry checks, immediate browser clearance and pending-request cancellation, durable per-token fingerprint revocation, current-role authorization and restricted membership recovery. Applied additive migration and generated client; schema/status, both builds, lint/type checks, 114 backend tests and 108 distinct browser cases across regression/focused checks passed. Final focused browser run: 10/10, including real logout receipt/replay denial. [Guide](backend/docs/security-step-1-session-lifecycle.md). Expired-revocation pruning remains retention work; already-accepted writes are not rolled back by sign-out.
@@ -409,25 +421,42 @@ Security checks needed by an earlier feature are done with that feature; this ph
 Combined authorization/admission/tool/cache boundaries and recovery were verified.
 Controlled model tests do not certify live-model grounding; previous Git history,
 production credential/network configuration, parser resource controls and operational
-retention retain the limitations documented in the step guides. Phase 15 has not
-started implementation yet.
+retention retain the limitations documented in the step guides. Phase 15 subsequently
+added local monitoring and a dry-run-first retention command; production operation remains later.
 
-### Phase 15 — Monitoring and audit history: understand what happened
+### Phase 15 â€” Monitoring and audit history: understand what happened
 
 Monitoring tells developers whether the system is healthy. Audit history records important
 user actions, such as a role change, for an authorized reviewer.
 
 Flow: **request/job -> identifier -> structured logs and timings -> metrics/audit view**.
 
-- [ ] **15.1 NEXT** Add safe structured logs and identifiers linking requests to jobs.
-- [ ] **15.2** Trace database, retrieval, generation, and worker timings.
-- [ ] **15.3** Add health/readiness checks, queue failure counts, and alert conditions.
-- [ ] **15.4** Store organization-scoped audit events for important actions and add an authorized view.
-- [ ] **15.5** Verify a failed job can be diagnosed without exposing document contents or secrets.
+```mermaid
+flowchart LR
+    A[15.1 Safe logs and request/job IDs - DONE] --> B[15.2 Stage timings - DONE]
+    B --> C[15.3 Health and scoped alerts - DONE]
+    C --> D[15.4 Atomic audit records and Operations screen - DONE]
+    D --> E[15.5 Failure diagnosis and retention verification - DONE]
+    E --> F[16 Full-system testing - NEXT entire phase]
+    style F fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
+```
+
+- [x] **15.1 DONE** Server-generated request IDs, context-safe structured logs and submission/worker correlation; no arbitrary payload logging.
+- [x] **15.2 DONE** Database, retrieval, embedding, generation, extraction, chunking, queue-wait and worker timings.
+- [x] **15.3 DONE** Liveness/readiness endpoints, bounded scoped queue inspection and alert conditions, including unknown worker status.
+- [x] **15.4 DONE** Transactional organization audit records and a paginated owner/admin Operations screen with current-permission checks.
+- [x] **15.5 DONE** Real failed-job diagnosis across three attempts, private-data canary checks, atomic audit rollback and dry-run retention verification.
+
+**Phase 15 completion gate: PASSED on 2026-10-27 for the documented local workflow.**
+[Guide and evidence](backend/docs/phase-15-monitoring-and-audit.md) and
+[future step-sized commits](backend/docs/phase-15-commit-plan.md).
+Queue state samples cover at most 50 documents; alerts are evaluated on reads.
+There is no external notification service, historical metrics aggregation or live
+model evaluation in this phase. Retention cleanup was not applied.
 
 Example: identify whether a slow upload is waiting in the queue or generating embeddings.
 
-### Phase 16 — Full-system testing: prove the pieces work together
+### Phase 16 - Full-system testing: prove the pieces work together (NEXT entire phase)
 
 Flow: **known test data -> full user journeys -> failure scenarios -> release checklist**.
 
@@ -440,7 +469,7 @@ Flow: **known test data -> full user journeys -> failure scenarios -> release ch
 Validation: repeatable passing results and documented limits. Existing tests remain useful;
 we do not defer feature-level testing until this phase.
 
-### Phase 17 — App containers and CI/CD: make builds repeatable
+### Phase 17 â€” App containers and CI/CD: make builds repeatable
 
 CI means automated checks when code changes. CD means a controlled deployment process.
 The Redis container already exists; this phase packages the application and its worker.
@@ -455,7 +484,7 @@ Flow: **code change -> install -> build/test -> package -> approved deployment**
 
 Validation: a clean checkout can build and test; a failed check prevents release.
 
-### Phase 18 — Deployment: run the application for real users
+### Phase 18 â€” Deployment: run the application for real users
 
 Hosting choices and budget are decided here before provisioning paid resources.
 
@@ -517,7 +546,10 @@ Useful existing evidence:
 - [14.5 Measured question embedding cache, tenant keys, expiry, current-document reads and benchmark](backend/docs/security-step-5-measured-caching.md)
 - [14.6 Combined security gate, real API/Redis scenarios, browser verification and recovery](backend/docs/security-step-6-combined-verification.md)
 
-Before advancing a step, check:
+- [15 Monitoring, audit history, failure diagnosis and operating guide](backend/docs/phase-15-monitoring-and-audit.md)
+- [15 Step-sized commit plan](backend/docs/phase-15-commit-plan.md)
+
+Before advancing a phase, check:
 
 - [ ] I can locate the current step in the diagram.
 - [ ] I understand the problem this step solves and the new terms it introduces.
@@ -526,5 +558,6 @@ Before advancing a step, check:
 - [ ] Any remaining limitation is visible here.
 - [ ] The tracker has been updated and I know the next step.
 
-**Next lesson: 15.1 — explain safe structured logs and request/job identifiers,
-then connect an HTTP request with background work without logging private content.**
+**Next implementation: the entire Phase 16 (16.1-16.5). Explain system testing,
+recovery, model quality and performance with examples, then implement and validate
+the phase together. Step labels remain available for later commits.**

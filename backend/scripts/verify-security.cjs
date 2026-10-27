@@ -2,6 +2,7 @@
 // scripts here: security verification should not spend a user's provider quota.
 const { spawnSync } = require('node:child_process');
 const suites = [
+  'observability.telemetry', 'observability.integration',
   'security.combined.integration', 'security.review.integration', 'security.secret-boundaries',
   'usage.admission.integration', 'api.boundary.integration', 'auth.session.integration',
   'organization.permissions.integration', 'organization.profile.integration',

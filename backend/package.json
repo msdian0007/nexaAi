@@ -4,6 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "test:observability": "npm run build && node --test --test-concurrency=2 tests/observability.telemetry.test.cjs tests/observability.integration.test.cjs",
+    "maintenance:retention": "npm run build && node scripts/retention.cjs",
     "test:security": "npm run build && node scripts/verify-security.cjs",
     "benchmark:query-embeddings": "npm run build && node scripts/benchmark-query-embeddings.cjs",
     "test:query-cache": "npm run build && node --test --test-concurrency=2 tests/document.query-embedding.test.cjs tests/document.query-cache.integration.test.cjs tests/document.search.integration.test.cjs tests/agent.knowledge.integration.test.cjs tests/agent.routing.integration.test.cjs tests/security.review.integration.test.cjs tests/conversation.persistence.integration.test.cjs",

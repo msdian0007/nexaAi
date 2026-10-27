@@ -25,7 +25,7 @@ require.cache[embeddingId] = {
   exports: { generateEmbedding: async () => { embeddingCalls++; return [...vector]; } },
 };
 
-async function startAgentFixture({ fullApi = false } = {}) {
+async function startAgentFixture({ fullApi = false, logSink } = {}) {
   const initialEmbeddingCalls = embeddingCalls;
   const savedFactory = provider.createGeminiGenerator,
     savedAnswer = provider.generateGeminiText;
@@ -183,6 +183,7 @@ async function startAgentFixture({ fullApi = false } = {}) {
     // Full mode uses the shipped app, real scoped Redis admission and the
     // fixture's isolated queue. Existing focused router tests keep their setup.
     const app = fullApi ? require('../../dist/src/api').createApiApp({
+      logSink,
       origins: ['http://127.0.0.1:4173'],
       admissionStore: { consume: rules => (controls.admissionUnavailable ? unavailableStore : allowanceStore).consume(rules) },
     }) : express();
@@ -219,6 +220,7 @@ async function startAgentFixture({ fullApi = false } = {}) {
       );
     return {
       baseUrl,
+      app,
       context: { userId: user, organizationId: own },
       peer,
       outsider,
