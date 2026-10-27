@@ -4,9 +4,17 @@ Last updated: **2026-10-27**.
 
 ## START HERE: where we are
 
-**Current phase: Phase 15 - DONE for the verified local workflow.**
-**Last completed phase: 15.1-15.5 - Monitoring, timing, health checks and audit history.**
-**Next implementation: the entire Phase 16 (16.1-16.5), full-system testing.**
+**Current phase: Phase 16 - DONE for the verified local workflow.**
+**Last completed phase: 16.1-16.5 - Full-system testing and measured limits.**
+**Next implementation: the entire Phase 17 (17.1-17.5), containers and CI/CD.**
+
+Phase 16 provides one release workflow across backend, browser, recovery, security,
+live Gemini quality and local performance checks. The final backend gate passed 343
+tests from 45 files; Chrome passed 117/117; frontend utilities passed 13/13. Seven
+live agent-routing cases and four live RAG cases passed using synthetic data. The
+bounded local benchmark recorded its environment and limits rather than claiming
+production capacity. [Phase 16 guide and evidence](backend/docs/phase-16-full-system-verification.md).
+[Step-sized commit plan](backend/docs/phase-16-commit-plan.md).
 
 Phase 15 connects HTTP requests to background jobs using server-generated identifiers,
 records safe timings, separates liveness from dependency readiness, and adds an
@@ -26,8 +34,9 @@ five local commits (15.1-15.5) at the user's request; no push was performed.
 [Step-sized commit plan](backend/docs/phase-15-commit-plan.md).
 The [Phase 14 security evidence](backend/docs/security-step-6-combined-verification.md)
 and [bounded question cache](backend/docs/security-step-5-measured-caching.md) remain
-applicable. Live model quality, realistic load and production deployment remain
-unverified. Previous Git history still contains earlier credential/upload copies.
+applicable. Phase 16 added bounded synthetic live-model evaluation and a small local
+performance baseline; broad real-document quality, sustained load and production
+deployment remain unverified. Previous Git history still contains earlier credential/upload copies.
 PDF/ZIP signatures are admission checks; full parsing remains in the worker.
 
 **Phase 11 is DONE for the verified local workflow.** A real Chrome journey passed:
@@ -229,14 +238,14 @@ flowchart TD
     M --> N[13 Dashboard - DONE locally]
     N --> O[14 Security and resource limits - DONE locally]
     O --> P[15 Monitoring and audit history - DONE locally]
-    P --> Q[16 Full-system testing - NEXT entire phase]
-    Q --> R[17 Application containers and automated checks]
+    P --> Q[16 Full-system testing - DONE locally]
+    Q --> R[17 Application containers and automated checks - NEXT entire phase]
     R --> S[18 Deployment and production validation]
-    style Q fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
+    style R fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
 ```
 
 Text route: **1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 (done locally)
--> earlier gaps complete -> 12 (done for local flow) -> 13 (done for local flow) -> 14 (done for verified local flow) -> 15 (done for verified local flow) -> 16 (next: entire phase) -> 17 -> 18.**
+-> earlier gaps complete -> 12 (done for local flow) -> 13 (done for local flow) -> 14 (done for verified local flow) -> 15 (done for verified local flow) -> 16 (done for verified local flow) -> 17 (next: entire phase) -> 18.**
 
 Some work was implemented in a different chronological order. We keep the original
 phase identities and explicitly return to unfinished features instead of hiding them.
@@ -253,7 +262,7 @@ Future steps are a working plan; explain and record changes before implementing 
 | 5 Document management | DONE for planned local flow | Upload, background status, paginated library, coordinated owner/admin deletion, and retries for older saved files. | Pending deletion cleanup requires explicit Finish deletion. Cloud storage is Phase 18. |
 | 6 Document processing | DONE for core flow | Extract text and split it into chunks; invoked by the worker and verified in the live 11.6 journey. | Broader document-format evaluation remains in Phase 16. |
 | 7 Embeddings and search | DONE for core flow | Local embeddings, stored vectors, organization-scoped similarity search. | More retrieval evaluation remains in Phase 16. |
-| 8 RAG answers | DONE for core flow | Retrieved evidence, Gemini answers, validated citations, missing/conflicting evidence handling. | More answer-quality cases remain in Phase 16. |
+| 8 RAG answers | DONE for core flow | Retrieved evidence, Gemini answers, validated citations, missing/conflicting evidence handling. | Phase 16 added four live synthetic cases; broad real-document evaluation remains future work. |
 | 9 Chat interface | DONE for planned local flow | Ask questions, answers/sources, loading/errors, new conversation, confirmed private conversation deletion, safe Markdown for new and saved answers. | Standard Markdown only; tables, syntax highlighting and conversational memory are outside this step. |
 | 10 Conversation history | DONE for core flow | Save exchanges, list/read history, pagination, reopen and continue, backend live verification. | Earlier messages are NOT yet passed to Gemini as conversation context. |
 
@@ -286,7 +295,7 @@ flowchart LR
     C --> D[11.4 Recovery - DONE]
     D --> E[11.5 Upload and UI integration - DONE]
     E --> F[11.6 End-to-end validation - DONE]
-    F --> G[Local Phases 12 through 15 DONE; NEXT entire Phase 16]
+    F --> G[Local Phases 12 through 16 DONE; NEXT entire Phase 17]
     style G fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
 ```
 
@@ -334,14 +343,14 @@ flowchart LR
     C --> D[12.4 Tool choice or clarification - DONE]
     D --> E[12.5 Confirmed document retry - DONE]
     E --> F[12.6 HTTP, UI, execution records and integration checks - DONE]
-    F --> G[Local Phases 13 through 15 DONE; NEXT entire Phase 16]
+    F --> G[Local Phases 13 through 16 DONE; NEXT entire Phase 17]
     style G fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
 ```
 
 - [x] **12.1 DONE** Define exact tool inputs/outputs and permission requirements; implement strict tool-call validation. Backend build and 11 contract tests passed. [Guide](backend/docs/agent-step-1-tool-contracts.md). These tests validate shapes and declared policy, not executor authorization.
 - [x] **12.2 DONE** Connect the knowledge executor to existing RAG with current membership checks before retrieval and after generation, strict inputs and server-owned settings. Backend build and 21 contract/integration tests passed, including real scoped vector retrieval and revoked access. [Guide](backend/docs/agent-step-2-knowledge-tool.md). Routing/UI were subsequently delivered in 12.4/12.6.
 - [x] **12.3 DONE** Add document counts with current membership and a scoped aggregate in one read-only snapshot, zero-filled status totals and database/transaction timeouts. Backend build and 32 agent tests passed, including real write rejection, slow-query cancellation and concurrent-insert consistency. [Guide](backend/docs/agent-step-3-document-counts.md). Counts describe saved database status, not live Redis state.
-- [x] **12.4 DONE** Connect validated Gemini selection to one read executor or clarification/unsupported output. Preserve original questions, reject forged arguments/actions, and recheck access after selection. Backend build and 59 scoped tests passed with controlled model decisions and real executor/database integration. [Guide](backend/docs/agent-step-4-tool-routing.md). Live intent evaluation remains Phase 16; HTTP/UI were delivered in 12.6.
+- [x] **12.4 DONE** Connect validated Gemini selection to one read executor or clarification/unsupported output. Preserve original questions, reject forged arguments/actions, and recheck access after selection. Backend build and 59 scoped tests passed with controlled model decisions and real executor/database integration. [Guide](backend/docs/agent-step-4-tool-routing.md). Phase 16 subsequently passed seven live synthetic intent cases; HTTP/UI were delivered in 12.6.
 - [x] **12.5 DONE** Add durable owned/version-bound five-minute retry proposals, separate confirmation/cancel/receipt functions, atomic single-use claims and existing queue/lock coordination. Migration, Prisma validation, backend build and 86 scoped tests passed. [Guide](backend/docs/agent-step-5-confirmed-retry.md). Routing requires one explicit document ID; filename-only requests need clarification. HTTP/UI confirmation was delivered in 12.6.
 - [x] **12.6 DONE** Add authenticated Agent endpoints/screen, typed results, separate confirmation/cancel/status controls, private metadata records and proposal recovery. Migration, both builds, changed-file lint, Prisma validation, 100 backend and 37 distinct browser tests passed, including a real-auth/API/PostgreSQL/Redis Chrome journey with controlled model output. [Guide](backend/docs/agent-step-6-api-ui-verification.md).
 
@@ -350,7 +359,7 @@ an unauthorized action is blocked. Real external actions require explicit author
 
 **Phase 12 completion gate: PASSED on 2026-10-26 for the documented local flow.**
 Provider decisions/output and embeddings were controlled in the integrated journey;
-live routing accuracy and production evaluation remain Phase 16. Execution records
+Phase 16 later added bounded live routing/RAG evaluation. Broad production evaluation remains future work. Execution records
 store metadata, not recoverable agent answer bodies. The broader audit/retention system
 was delivered in Phase 15. Local session/rate-limit controls passed Phase 14 verification;
 production configuration remains deployment work.
@@ -370,7 +379,7 @@ flowchart LR
     A[13.1 Metric definitions and date validation - DONE] --> B[13.2 Summary API - DONE]
     B --> C[13.3 Cards, date controls and chart - DONE]
     C --> D[13.4 Known fixtures and isolation verification - DONE]
-    D --> E[Local Phases 14 and 15 DONE; NEXT entire Phase 16]
+    D --> E[Local Phases 14 through 16 DONE; NEXT entire Phase 17]
     style E fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
 ```
 
@@ -437,8 +446,9 @@ flowchart LR
     B --> C[15.3 Health and scoped alerts - DONE]
     C --> D[15.4 Atomic audit records and Operations screen - DONE]
     D --> E[15.5 Failure diagnosis and retention verification - DONE]
-    E --> F[16 Full-system testing - NEXT entire phase]
-    style F fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
+    E --> F[16 Full-system testing - DONE]
+    F --> G[17 Containers and CI/CD - NEXT entire phase]
+    style G fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
 ```
 
 - [x] **15.1 DONE** Server-generated request IDs, context-safe structured logs and submission/worker correlation; no arbitrary payload logging.
@@ -456,18 +466,20 @@ model evaluation in this phase. Retention cleanup was not applied.
 
 Example: identify whether a slow upload is waiting in the queue or generating embeddings.
 
-### Phase 16 - Full-system testing: prove the pieces work together (NEXT entire phase)
+### Phase 16 - Full-system testing: prove the pieces work together (DONE locally)
 
 Flow: **known test data -> full user journeys -> failure scenarios -> release checklist**.
 
-- [ ] **16.1** Consolidate unit, API/database, Redis, and browser tests into repeatable commands.
-- [ ] **16.2** Test the real browser-to-backend flow with isolated accounts and documents.
-- [ ] **16.3** Test concurrent uploads, lost connections, stopped workers, and retry recovery.
-- [ ] **16.4** Evaluate live agent intent selection, unsupported filters/actions, answer correctness, citations, missing evidence, and conflicting documents.
-- [ ] **16.5** Run isolation/security checks and measure realistic performance limits.
+- [x] **16.1 DONE** Root commands consolidate backend, frontend, browser, benchmark and opt-in live checks; ordinary backend test files are discovered once.
+- [x] **16.2 DONE** One Chrome run passed all 117 isolated and integrated browser cases using real shipped pages and scoped backend fixtures.
+- [x] **16.3 DONE** The consolidated gate covers concurrent submissions, uncertain acknowledgements, disconnected producers, killed workers, stalled redelivery and explicit recovery.
+- [x] **16.4 DONE** Live Gemini passed seven routing cases and four grounded RAG cases for citations, missing/partial evidence, conflicts and tenant isolation.
+- [x] **16.5 DONE** The 343-test backend gate passed and a bounded local PostgreSQL/Redis/API profile recorded median/p95 values and concurrency limits.
 
-Validation: repeatable passing results and documented limits. Existing tests remain useful;
-we do not defer feature-level testing until this phase.
+**Phase 16 completion gate: PASSED on 2026-10-27 for the documented local workflow.**
+[Guide, commands, results and limitations](backend/docs/phase-16-full-system-verification.md).
+The profile is not a production load test; provider quota, large corpora, sustained
+traffic, container reproducibility and deployment remain outside this completion gate.
 
 ### Phase 17 â€” App containers and CI/CD: make builds repeatable
 
@@ -548,6 +560,8 @@ Useful existing evidence:
 
 - [15 Monitoring, audit history, failure diagnosis and operating guide](backend/docs/phase-15-monitoring-and-audit.md)
 - [15 Step-sized commit plan](backend/docs/phase-15-commit-plan.md)
+- [16 Full-system verification, live evaluation and measured limits](backend/docs/phase-16-full-system-verification.md)
+- [16 Step-sized commit plan](backend/docs/phase-16-commit-plan.md)
 
 Before advancing a phase, check:
 
@@ -558,6 +572,6 @@ Before advancing a phase, check:
 - [ ] Any remaining limitation is visible here.
 - [ ] The tracker has been updated and I know the next step.
 
-**Next implementation: the entire Phase 16 (16.1-16.5). Explain system testing,
-recovery, model quality and performance with examples, then implement and validate
+**Next implementation: the entire Phase 17 (17.1-17.5). Explain containers, CI/CD,
+configuration, migrations and rollback with examples, then implement and validate
 the phase together. Step labels remain available for later commits.**

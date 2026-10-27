@@ -1,0 +1,26 @@
+{
+  "measuredAt": "2026-10-27T03:59:03.129Z",
+  "profile": "One local Node API, local PostgreSQL/pgvector and Redis; deterministic provider and embedding fixtures.",
+  "limits": {
+    "sequentialRequests": 12,
+    "concurrentRequests": 5,
+    "perRequestDeadlineMs": 5000,
+    "meaning": "A correctness smoke measurement at five concurrent reads, not a production load or capacity guarantee."
+  },
+  "readiness": {
+    "requests": 12,
+    "minMs": 12.24,
+    "medianMs": 15.95,
+    "p95Ms": 31.12,
+    "maxMs": 31.12
+  },
+  "scopedSearch": {
+    "requests": 12,
+    "minMs": 18.44,
+    "medianMs": 29.11,
+    "p95Ms": 37.61,
+    "maxMs": 37.61
+  },
+  "fiveConcurrentSearchesMs": 319.85,
+  "cacheInferenceCalls": 1
+}

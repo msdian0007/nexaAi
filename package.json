@@ -4,7 +4,8 @@
   "scripts": {
     "test:phase16:backend": "npm --prefix backend run test:phase16",
     "test:phase16:frontend": "npm --prefix frontend run test:phase16",
+    "benchmark:phase16": "npm --prefix backend run benchmark:phase16",
     "evaluate:phase16:live": "npm --prefix backend run evaluate:phase16:live",
-    "verify:phase16": "npm run test:phase16:backend && npm run test:phase16:frontend"
+    "verify:phase16": "npm run test:phase16:backend && npm run test:phase16:frontend && npm run benchmark:phase16"
   }
 }

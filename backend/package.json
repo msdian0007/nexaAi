@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test:phase16": "npm run build && node scripts/verify-phase16.cjs",
+    "benchmark:phase16": "npm run build && node scripts/benchmark-phase16.cjs",
     "evaluate:phase16:live": "npm run build && node scripts/evaluate-agent.cjs && node scripts/evaluate-rag.cjs",
     "test:observability": "npm run build && node --test --test-concurrency=2 tests/observability.telemetry.test.cjs tests/observability.integration.test.cjs",
     "maintenance:retention": "npm run build && node scripts/retention.cjs",
