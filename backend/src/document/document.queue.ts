@@ -73,6 +73,14 @@ export async function createDocumentQueue(options: { url?: string; queueName?: s
   let closed = false;
   return {
     isReady: () => !closed && connection.status === 'ready',
+    async checkConnection(): Promise<boolean> {
+      if (closed || connection.status !== 'ready') return false;
+      return await withDeadline(connection.ping()) === 'PONG';
+    },
+    async workerCount(): Promise<number> {
+      if (closed || connection.status !== 'ready') throw new DocumentQueueUnavailableError();
+      return (await withDeadline(readyQueue.getWorkers())).length;
+    },
     async getState(value: unknown): Promise<string> {
       const data = parseDocumentJobData(value);
       if (closed || connection.status !== 'ready') throw new DocumentQueueUnavailableError();

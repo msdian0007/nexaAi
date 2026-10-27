@@ -15,6 +15,7 @@ import { DocumentsPage } from "./features/documents/DocumentsPage";
 import { ChatPage } from "./features/chat/ChatPage";
 import { AgentPage } from "./features/agents/AgentPage";
 import { DashboardPage } from "./features/analytics/DashboardPage";
+import { OperationsPage } from "./features/operations/OperationsPage";
 import { OrganizationPage } from "./features/organization/OrganizationPage";
 import { MembersPage } from "./features/organization/MembersPage";
 import { SwitchOrganizationPage } from "./features/organization/SwitchOrganizationPage";
@@ -89,6 +90,7 @@ function AppRoutes() {
                 <Link className="text-button" to="/organization">
                   Organization
                 </Link>
+                <Link className="text-button" to="/operations">Operations</Link>
                 <Link className="text-button" to="/organizations/switch">
                   Switch organization
                 </Link>
@@ -137,6 +139,7 @@ function AppRoutes() {
             {/* Chat shares the same verified-session guard as the other workspace pages. */}
             <Route path="/chat" element={<ChatPage />} />
             <Route path="/agent" element={<AgentPage />} />
+            <Route path="/operations" element={<OperationsPage />} />
           </Route>
           <Route
             path="*"

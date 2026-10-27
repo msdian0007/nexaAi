@@ -10,6 +10,7 @@ import dashboardRoutes, { dashboardJsonError } from "./analytics/dashboard.route
 import { installApiBoundary, apiError } from "./http/api.boundary";
 import { installUsageAdmission, type AdmissionStore, type UsageBudgets } from "./http/usage.admission";
 import { requestTelemetry, type LogSink } from "./observability/telemetry";
+import operationsRoutes, { readiness } from "./observability/operations.routes";
 
 // The exact production middleware/routes can run on an ephemeral test port.
 // Starting the server and warming Redis belong only to the app.ts entry point.
@@ -24,6 +25,9 @@ export function createApiApp(options: { origins?: string[]; admissionStore?: Adm
   app.use("/api/v1/chat", ragRoutes);
   app.use("/api/v1/agents", agentRoutes, agentJsonError);
   app.use("/api/v1/analytics", dashboardRoutes, dashboardJsonError);
+  app.use("/api/v1/operations", operationsRoutes);
+  app.get("/api/v1/health/live", (_req, res) => res.json({ success: true, data: { status: "live" } }));
+  app.get("/api/v1/health/ready", readiness);
   app.get("/api/v1/health", async (_req, res) => {
     try {
       await prisma.$queryRaw`SELECT 1`;
