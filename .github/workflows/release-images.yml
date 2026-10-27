@@ -1,0 +1,49 @@
+name: Publish release images
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Normalize image owner and immutable tag
+        id: names
+        shell: bash
+        run: |
+          echo "owner=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+          echo "tag=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+      - name: Publish backend runtime
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          target: runtime
+          push: true
+          tags: ghcr.io/${{ steps.names.outputs.owner }}/nexaai-backend:${{ steps.names.outputs.tag }}
+      - name: Publish migration runner
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          target: migration
+          push: true
+          tags: ghcr.io/${{ steps.names.outputs.owner }}/nexaai-migration:${{ steps.names.outputs.tag }}
+      - name: Publish frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: frontend
+          push: true
+          build-args: VITE_API_BASE_URL=https://${{ vars.PRODUCTION_APP_DOMAIN }}/api/v1
+          tags: ghcr.io/${{ steps.names.outputs.owner }}/nexaai-frontend:${{ steps.names.outputs.tag }}
