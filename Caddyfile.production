@@ -1,0 +1,22 @@
+{
+  # A real email lets the certificate authority notify the operator about TLS issues.
+  email {$TLS_EMAIL}
+}
+
+{$APP_DOMAIN} {
+  encode zstd gzip
+
+  # Keeping the API and SPA on one HTTPS origin avoids exposing another public port.
+  handle /api/* {
+    reverse_proxy api:5000
+  }
+
+  handle {
+    reverse_proxy frontend:8080
+  }
+
+  header {
+    Strict-Transport-Security "max-age=31536000; includeSubDomains"
+    -Server
+  }
+}
