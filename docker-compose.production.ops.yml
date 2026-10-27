@@ -1,0 +1,64 @@
+services:
+  database-export:
+    image: pgvector/pgvector:pg16
+    profiles: [operations]
+    environment:
+      PGHOST: postgres
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      PGDATABASE: nexaai
+    entrypoint: ["/bin/sh", "/ops/export-database.sh"]
+    volumes:
+      - ./ops:/ops:ro
+      - database_backups:/backups
+    networks: [data]
+
+  restic-backup:
+    image: restic/restic:0.19.1
+    profiles: [operations]
+    environment: &restic_environment
+      RESTIC_REPOSITORY: ${BACKUP_REPOSITORY:?Set BACKUP_REPOSITORY}
+      RESTIC_PASSWORD: ${BACKUP_PASSWORD:?Set BACKUP_PASSWORD}
+      AWS_ACCESS_KEY_ID: ${BACKUP_S3_ACCESS_KEY_ID:?Set BACKUP_S3_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${BACKUP_S3_SECRET_ACCESS_KEY:?Set BACKUP_S3_SECRET_ACCESS_KEY}
+      AWS_DEFAULT_REGION: ${S3_REGION:-auto}
+    entrypoint: ["/bin/sh", "/ops/backup-database.sh"]
+    volumes:
+      - ./ops:/ops:ro
+      - database_backups:/backups
+    networks: [backup_egress]
+
+  restic-restore:
+    image: restic/restic:0.19.1
+    profiles: [operations]
+    environment:
+      <<: *restic_environment
+    entrypoint: ["/bin/sh", "/ops/download-latest-backup.sh"]
+    volumes:
+      - ./ops:/ops:ro
+      - restore_workspace:/restore
+    networks: [backup_egress]
+
+  restore-drill:
+    image: pgvector/pgvector:pg16
+    profiles: [operations]
+    environment:
+      PGHOST: postgres
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      PGDATABASE: postgres
+      ALLOW_RESTORE_DRILL: ${ALLOW_RESTORE_DRILL:-no}
+    entrypoint: ["/bin/sh", "/ops/verify-database-restore.sh"]
+    volumes:
+      - ./ops:/ops:ro
+      - restore_workspace:/restore:ro
+    networks: [data]
+
+networks:
+  backup_egress:
+
+volumes:
+  database_backups:
+  restore_workspace:
