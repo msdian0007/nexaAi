@@ -2,6 +2,8 @@
   "name": "nexaai-workspace",
   "private": true,
   "scripts": {
-    "test:phase16:backend": "npm --prefix backend run test:phase16"
+    "test:phase16:backend": "npm --prefix backend run test:phase16",
+    "test:phase16:frontend": "npm --prefix frontend run test:phase16",
+    "verify:phase16": "npm run test:phase16:backend && npm run test:phase16:frontend"
   }
 }
