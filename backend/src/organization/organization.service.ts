@@ -1,3 +1,4 @@
+import { measure } from "../observability/telemetry";
 import { Role, Prisma } from "../../generated/prisma/client";
 import prisma from "../config/database";
 import { createHash, randomBytes } from "node:crypto";
@@ -66,7 +67,7 @@ async function withMembership<T>(
   userId: string,
   action: (tx: Prisma.TransactionClient, role: Role) => Promise<T>,
 ) {
-  return prisma.$transaction(async (tx) => {
+  return measure("database", () => prisma.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT id FROM "Organization" WHERE id = ${organizationId} FOR UPDATE`;
     const actor = await tx.organizationMember.findUnique({
       where: { userId_organizationId: { userId, organizationId } },
@@ -77,7 +78,7 @@ async function withMembership<T>(
         "Current organization membership is required",
       );
     return action(tx, actor.role);
-  });
+  }));
 }
 function requireManager(role: Role) {
   if (role === Role.MEMBER)

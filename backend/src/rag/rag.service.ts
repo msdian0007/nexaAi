@@ -1,3 +1,4 @@
+import { measure } from "../observability/telemetry";
 import { searchDocumentChunks } from "../document/document.search";
 import { buildDocumentContext } from "../document/document.context";
 import { generateRagAnswer } from "./rag.generation";
@@ -9,7 +10,7 @@ export const answerDocumentQuestion = async (
   topK: number,
   minSimilarity: number,
 ) => {
-  const matches = await searchDocumentChunks(organizationId, question, topK, minSimilarity);
+  const matches = await measure("retrieval", () => searchDocumentChunks(organizationId, question, topK, minSimilarity));
   const context = buildDocumentContext(matches);
-  return generateRagAnswer(question, context, generateGeminiText);
+  return measure("generation", () => generateRagAnswer(question, context, generateGeminiText));
 };

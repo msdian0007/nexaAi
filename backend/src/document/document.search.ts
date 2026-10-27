@@ -1,3 +1,4 @@
+import { measure } from "../observability/telemetry";
 import prisma from "../config/database";
 import { getQueryEmbedding } from "./document.query-embedding";
 
@@ -25,7 +26,7 @@ export const searchDocumentChunks = async (
   }
   // Reuse only text-to-vector computation. Always run scoped SQL below so an
   // upload, reprocessing result, rename or deletion is reflected immediately.
-  const embedding = await getQueryEmbedding(organizationId, query);
+  const embedding = await measure("embedding", () => getQueryEmbedding(organizationId, query));
   if (embedding.length !== 384 || !embedding.every(Number.isFinite) || !embedding.some(value => value !== 0)) {
     throw new Error("Invalid query embedding");
   }
@@ -33,7 +34,7 @@ export const searchDocumentChunks = async (
 
   // Exact search over this tenant's eligible chunks avoids approximate-index
   // filtering dropping matches. Revisit indexing as the corpus grows.
-  return prisma.$queryRaw<SearchResult[]>`
+  return measure("database", () => prisma.$queryRaw<SearchResult[]>`
     WITH eligible AS MATERIALIZED (
       SELECT c."id" AS "chunkId", c."documentId", d."originalName" AS "documentName",
              c."chunkIndex", c."content", c."embedding"
@@ -52,5 +53,5 @@ export const searchDocumentChunks = async (
     WHERE 1 - ("embedding" <=> ${vector}::vector(384)) >= ${minSimilarity}
     ORDER BY "embedding" <=> ${vector}::vector(384), "chunkId"
     LIMIT ${topK}
-  `;
+  `);
 };

@@ -1,3 +1,4 @@
+import { measure } from "../observability/telemetry";
 import type {
   AgentContext,
   AgentToolResult,
@@ -33,7 +34,7 @@ export async function runAgentRequest(
   // Reject removed members before spending a routing request. Model selection
   // does not establish identity or grant permission to run a tool.
   await requireAgentMembership(context);
-  const decision = await selectAgentDecision(request);
+  const decision = await measure("generation", () => selectAgentDecision(request));
   // Also withhold clarification/unsupported text after revocation during routing.
   await requireAgentMembership(context);
   if (decision.kind !== "tool") return decision;

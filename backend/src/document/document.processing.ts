@@ -1,3 +1,4 @@
+import { measure } from "../observability/telemetry";
 import prisma from "../config/database";
 import { createDocumentChunks } from "./document.chunk.service";
 import { embedDocumentChunks } from "./document.embedding.service";
@@ -41,9 +42,9 @@ export const processDocument = async (
       // Hash collisions only serialize unrelated documents; they cannot mix data.
       const [lock] = await tx.$queryRaw<{ acquired: boolean }[]>`
       SELECT pg_try_advisory_xact_lock(hashtextextended(${documentId}, 0)) AS acquired`;
-      const document = await tx.document.findFirst({
+      const document = await measure("database", () => tx.document.findFirst({
         where: { id: documentId, organizationId, deletionRequestedAt: null },
-      });
+      }));
       if (!document) throw new DocumentNotFoundError();
       if (!lock?.acquired)
         throw new DocumentProcessingConflictError(
@@ -74,16 +75,16 @@ export const processDocument = async (
       });
       await tx.$executeRaw`SAVEPOINT document_work`;
       try {
-        const extractedText = await extractTextFromDocument(
+        const extractedText = await measure("extraction", () => extractTextFromDocument(
           document.storagePath,
           document.mimeType,
-        );
+        ));
         if (!extractedText.trim())
           throw new Error("No text could be extracted from the document");
         // All result writes share this transaction. An old attempt whose connection
         // dies cannot resume writing through a fresh connection after lock loss.
-        await createDocumentChunks(document.id, extractedText, tx);
-        await embedDocumentChunks(document.id, tx);
+        await measure("chunking", () => createDocumentChunks(document.id, extractedText, tx));
+        await measure("embedding", () => embedDocumentChunks(document.id, tx));
         await tx.document.update({
           where: { id: documentId },
           data: { extractedText, status: "COMPLETED", errorMessage: null },
