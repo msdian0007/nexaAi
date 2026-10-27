@@ -6,6 +6,12 @@
     "test:phase16:frontend": "npm --prefix frontend run test:phase16",
     "benchmark:phase16": "npm --prefix backend run benchmark:phase16",
     "evaluate:phase16:live": "npm --prefix backend run evaluate:phase16:live",
-    "verify:phase16": "npm run test:phase16:backend && npm run test:phase16:frontend && npm run benchmark:phase16"
+    "verify:phase16": "npm run test:phase16:backend && npm run test:phase16:frontend && npm run benchmark:phase16",
+    "containers:config": "docker compose -f docker-compose.yml -f docker-compose.app.yml --env-file .env.container config --quiet",
+    "containers:build": "docker compose -f docker-compose.yml -f docker-compose.app.yml --env-file .env.container build",
+    "containers:up": "docker compose -f docker-compose.yml -f docker-compose.app.yml --env-file .env.container up --build --wait",
+    "containers:smoke": "node scripts/container-smoke.mjs",
+    "containers:down": "docker compose -f docker-compose.yml -f docker-compose.app.yml --env-file .env.container down",
+    "containers:logs": "docker compose -f docker-compose.yml -f docker-compose.app.yml --env-file .env.container logs --tail=200 api worker frontend migrate"
   }
 }
