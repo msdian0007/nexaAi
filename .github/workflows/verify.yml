@@ -1,0 +1,82 @@
+name: Verify NexaAI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  application:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ci-postgres-password
+          POSTGRES_DB: nexaai_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d nexaai_test"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+      redis:
+        image: redis:7.4-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://postgres:ci-postgres-password@127.0.0.1:5432/nexaai_test
+      REDIS_URL: redis://127.0.0.1:6379/0
+      JWT_SECRET: ci-only-jwt-secret-with-at-least-32-bytes
+      GEMINI_API_KEY: ci-synthetic-provider-key-not-used-live
+      API_ALLOWED_ORIGINS: http://127.0.0.1:4173
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+      - name: Install and prepare backend
+        working-directory: backend
+        run: |
+          npm ci
+          node node_modules/prisma/build/index.js generate --config prisma7.config.ts
+          npm run build
+          npm run migrate:deploy
+      - name: Run complete backend gate
+        working-directory: backend
+        run: npm run test:phase16
+      - name: Install frontend and Chrome
+        working-directory: frontend
+        run: |
+          npm ci
+          npx playwright install --with-deps chrome
+      - name: Run complete frontend gate
+        working-directory: frontend
+        run: npm run test:phase16
+
+  containers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build backend runtime and migration images
+        run: |
+          docker build --target runtime -t nexaai-backend:test backend
+          docker build --target migration -t nexaai-migration:test backend
+      - name: Build frontend static image
+        run: docker build --build-arg VITE_API_BASE_URL=http://localhost:5000/api/v1 -t nexaai-frontend:test frontend
