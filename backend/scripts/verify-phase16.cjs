@@ -13,9 +13,23 @@ const suites = readdirSync(path.join(__dirname, "../tests"), { withFileTypes: tr
   .filter((entry) => entry.isFile() && entry.name.endsWith(".test.cjs") && !excluded.has(entry.name))
   .map((entry) => `tests/${entry.name}`)
   .sort();
+const requiredRecoverySuites = [
+  "tests/document.pipeline.e2e.test.cjs",
+  "tests/document.processing.integration.test.cjs",
+  "tests/document.queue.integration.test.cjs",
+  "tests/document.queue.runtime.test.cjs",
+  "tests/document.recovery.integration.test.cjs",
+  "tests/document.reprocess.integration.test.cjs",
+  "tests/document.worker.integration.test.cjs",
+];
 
 if (suites.length < 40 || new Set(suites).size !== suites.length) {
   throw new Error("Phase 16 suite discovery is incomplete or duplicated.");
+}
+// Recovery is a release requirement, so an accidental rename/removal must fail
+// loudly instead of producing a smaller green test run.
+if (!requiredRecoverySuites.every((suite) => suites.includes(suite))) {
+  throw new Error("Phase 16 concurrency or recovery coverage is incomplete.");
 }
 console.log(`Phase 16 backend gate: ${suites.length} isolated test files.`);
 const result = spawnSync(process.execPath, ["--test", "--test-concurrency=2", ...suites], {
