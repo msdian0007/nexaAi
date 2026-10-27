@@ -22,9 +22,9 @@ export function requestFields(options: { body?: readonly string[]; required?: re
   };
 }
 
-export function allowedOrigins(value = process.env.API_ALLOWED_ORIGINS): string[] {
+export function allowedOrigins(value = process.env.API_ALLOWED_ORIGINS, nodeEnv = process.env.NODE_ENV): string[] {
   if (value === undefined) {
-    if (process.env.NODE_ENV === "production") throw new Error("API_ALLOWED_ORIGINS is required in production.");
+    if (nodeEnv === "production") throw new Error("API_ALLOWED_ORIGINS is required in production.");
     return ["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:4173", "http://127.0.0.1:4173"];
   }
   const origins = value.split(",").map(item => item.trim());

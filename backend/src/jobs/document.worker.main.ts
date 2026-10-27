@@ -1,9 +1,11 @@
 import prisma from '../config/database';
 import { createDocumentWorker } from '../document/document.worker';
+import { validateRuntimeConfig } from '../config/runtime';
 
 // Run this entry point from backend so stored relative upload paths resolve the
 // same way as they do in the API. The API and worker must share the uploaded files.
 async function main() {
+  validateRuntimeConfig('worker');
   const worker = createDocumentWorker();
   let shutdown: Promise<void> | undefined;
   const stop = () => {
