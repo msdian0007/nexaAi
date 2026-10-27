@@ -4,9 +4,9 @@ Last updated: **2026-10-27**.
 
 ## START HERE: where we are
 
-**Current phase: Phase 17 - DONE for the verified local/container workflow.**
+**Current phase: Phase 18 - local implementation ready; hosted evidence pending.**
 **Last completed phase: 17.1-17.5 - Containers, CI checks, configuration and release procedures.**
-**Next implementation: the entire Phase 18 (18.1-18.8), production deployment.**
+**Current implementation: Phase 18 production bundle is ready; external provisioning and live evidence remain.**
 
 Phase 17 packages API/worker, migrations and frontend as non-root images; starts them
 with PostgreSQL and Redis in dependency order; validates required configuration; and
@@ -521,17 +521,23 @@ Hosting choices and budget are decided here before provisioning paid resources.
 
 Flow: **choose hosting -> database/Redis/files -> deploy API and worker -> frontend/HTTPS -> verify**.
 
-- [ ] **18.1** Choose hosting, expected usage, and spending limits.
-- [ ] **18.2** Configure production PostgreSQL with pgvector, backups, and restricted access.
-- [ ] **18.3** Configure queue-compatible Redis with persistence and authenticated access.
-- [ ] **18.4** Move files to shared object storage so both API and worker can access them.
-- [ ] **18.5** Deploy API and worker, apply migrations, and verify production settings.
-- [ ] **18.6** Deploy frontend, configure its API URL, domain, HTTPS, and browser route handling.
-- [ ] **18.7** Verify signup -> upload -> background processing -> question -> saved history in production.
-- [ ] **18.8** Validate monitoring, restore/rollback procedures, and write the final operating guide.
+- [x] **18.1 IMPLEMENTED** Select a bounded pilot: one x86 VPS, private R2 buckets, 1-20 users, 10 GB documents and an infrastructure alert at EUR 25/month before tax. No resource purchased yet.
+- [ ] **18.2 READY FOR LIVE EVIDENCE** Private pgvector/PostgreSQL, daily encrypted Restic backups and a temporary-database restore drill are defined; provider backup and one live drill remain.
+- [ ] **18.3 READY FOR LIVE EVIDENCE** Redis is private, authenticated, AOF-persistent and no-eviction in production Compose; the hosted instance remains to be checked.
+- [x] **18.4 IMPLEMENTED LOCALLY** API and worker use one tenant-validated local/S3-compatible storage boundary with private temporary parsing and idempotent deletion. The 349-test backend gate passed; R2 integration remains live evidence.
+- [ ] **18.5 READY FOR LIVE EVIDENCE** Immutable SHA image publishing, migration-first startup, least-secret worker settings and dependency health are implemented; registry/server execution remains.
+- [ ] **18.6 READY FOR LIVE EVIDENCE** Caddy HTTPS, same-origin API routing and SPA fallback are configured; domain/DNS/certificate issuance remain.
+- [ ] **18.7 READY FOR LIVE EVIDENCE** A production verifier covers HTTPS signup -> upload -> worker -> grounded question -> history plus tenant isolation; it needs the deployed URL.
+- [x] **18.8 IMPLEMENTED LOCALLY** Monitoring thresholds, backup/restore/rollback commands and the operating guide are written; external alerts and a restore result remain live evidence.
 
 Validation: the complete user journey works over HTTPS, isolation checks pass, and recovery
 procedures have been exercised. Deployment is not complete merely because a homepage loads.
+
+**Phase 18 completion gate: AWAITING EXTERNAL PROVISIONING.** The reviewable local
+implementation is documented in [the Phase 18 operating guide](backend/docs/phase-18-production-deployment.md)
+and [step-sized commit plan](backend/docs/phase-18-commit-plan.md). Paid resources,
+DNS, secrets, hosted images, an off-site restore drill and HTTPS journey are not
+claimed as complete.
 
 ## 8. Progress evidence and review checklist
 
@@ -583,6 +589,8 @@ Useful existing evidence:
 - [16 Step-sized commit plan](backend/docs/phase-16-commit-plan.md)
 - [17 Containers, CI checks, configuration and release procedures](backend/docs/phase-17-containers-and-delivery.md)
 - [17 Step-sized commit plan](backend/docs/phase-17-commit-plan.md)
+- [18 Production deployment and operating guide](backend/docs/phase-18-production-deployment.md)
+- [18 Step-sized commit plan](backend/docs/phase-18-commit-plan.md)
 
 Before advancing a phase, check:
 
