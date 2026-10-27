@@ -4,9 +4,17 @@ Last updated: **2026-10-27**.
 
 ## START HERE: where we are
 
-**Current phase: Phase 16 - DONE for the verified local workflow.**
-**Last completed phase: 16.1-16.5 - Full-system testing and measured limits.**
-**Next implementation: the entire Phase 17 (17.1-17.5), containers and CI/CD.**
+**Current phase: Phase 17 - DONE for the verified local/container workflow.**
+**Last completed phase: 17.1-17.5 - Containers, CI checks, configuration and release procedures.**
+**Next implementation: the entire Phase 18 (18.1-18.8), production deployment.**
+
+Phase 17 packages API/worker, migrations and frontend as non-root images; starts them
+with PostgreSQL and Redis in dependency order; validates required configuration; and
+adds GitHub Actions plus migration/rollback procedures. An isolated Compose journey
+applied all migrations and processed a real uploaded TXT file to READY. The final
+regression passed 346/346 backend tests, 15/15 frontend utility/config tests and
+117/117 Chrome cases. [Phase 17 guide and evidence](backend/docs/phase-17-containers-and-delivery.md).
+[Step-sized commit plan](backend/docs/phase-17-commit-plan.md).
 
 Phase 16 provides one release workflow across backend, browser, recovery, security,
 live Gemini quality and local performance checks. The final backend gate passed 343
@@ -239,13 +247,13 @@ flowchart TD
     N --> O[14 Security and resource limits - DONE locally]
     O --> P[15 Monitoring and audit history - DONE locally]
     P --> Q[16 Full-system testing - DONE locally]
-    Q --> R[17 Application containers and automated checks - NEXT entire phase]
-    R --> S[18 Deployment and production validation]
-    style R fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
+    Q --> R[17 Application containers and automated checks - DONE locally]
+    R --> S[18 Deployment and production validation - NEXT entire phase]
+    style S fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
 ```
 
 Text route: **1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 (done locally)
--> earlier gaps complete -> 12 (done for local flow) -> 13 (done for local flow) -> 14 (done for verified local flow) -> 15 (done for verified local flow) -> 16 (done for verified local flow) -> 17 (next: entire phase) -> 18.**
+-> earlier gaps complete -> 12 (done for local flow) -> 13 (done for local flow) -> 14 (done for verified local flow) -> 15 (done for verified local flow) -> 16 (done for verified local flow) -> 17 (done for verified local/container flow) -> 18 (next: entire phase).**
 
 Some work was implemented in a different chronological order. We keep the original
 phase identities and explicitly return to unfinished features instead of hiding them.
@@ -255,7 +263,7 @@ Future steps are a working plan; explain and record changes before implementing 
 
 | Phase | Status | Implemented scope | Remaining work or validation |
 | --- | --- | --- | --- |
-| 1 Foundation | DONE for local core | React, Express, TypeScript, Prisma, PostgreSQL/pgvector, health API. | Full app containers are Phase 17. |
+| 1 Foundation | DONE for local core | React, Express, TypeScript, Prisma, PostgreSQL/pgvector, health API and Phase 17 application containers. | Production hosting is Phase 18. |
 | 2 Authentication and isolation | DONE for core flow | Register, password login, signed tokens, organization membership and scoped document/chat access. | Phase 14 local security gate passed; live-model evaluation and deployment configuration remain later. |
 | 3 Authentication screens | DONE for core flow | Login/register, protected navigation, sign out, safe request handling. | Refresh still requires login again by the current in-memory session design; expiry/logout/recovery controls were verified in Phase 14. |
 | 4 Organization management | DONE for planned local flow | Current-role permissions, profile editing, member screens, expiring invitations and organization switching. | Email delivery is manual; persistent sessions and global token revocation remain later work. |
@@ -295,7 +303,7 @@ flowchart LR
     C --> D[11.4 Recovery - DONE]
     D --> E[11.5 Upload and UI integration - DONE]
     E --> F[11.6 End-to-end validation - DONE]
-    F --> G[Local Phases 12 through 16 DONE; NEXT entire Phase 17]
+    F --> G[Local Phases 12 through 17 DONE; NEXT entire Phase 18]
     style G fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
 ```
 
@@ -343,7 +351,7 @@ flowchart LR
     C --> D[12.4 Tool choice or clarification - DONE]
     D --> E[12.5 Confirmed document retry - DONE]
     E --> F[12.6 HTTP, UI, execution records and integration checks - DONE]
-    F --> G[Local Phases 13 through 16 DONE; NEXT entire Phase 17]
+    F --> G[Local Phases 13 through 17 DONE; NEXT entire Phase 18]
     style G fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
 ```
 
@@ -379,7 +387,7 @@ flowchart LR
     A[13.1 Metric definitions and date validation - DONE] --> B[13.2 Summary API - DONE]
     B --> C[13.3 Cards, date controls and chart - DONE]
     C --> D[13.4 Known fixtures and isolation verification - DONE]
-    D --> E[Local Phases 14 through 16 DONE; NEXT entire Phase 17]
+    D --> E[Local Phases 14 through 17 DONE; NEXT entire Phase 18]
     style E fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
 ```
 
@@ -408,12 +416,14 @@ flowchart LR
     D --> E[14.5 Measured scoped caching - DONE]
     E --> F[14.6 Security verification - DONE]
     F --> G[15 Monitoring and audit history - DONE]
-    G --> H[16 Full-system testing - NEXT entire phase]
+    G --> H[16 Full-system testing - DONE]
+    H --> I[17 Containers and CI/CD - DONE locally]
+    I --> J[18 Production deployment - NEXT entire phase]
     style C fill:#d1e7dd,stroke:#146c43,color:#222
     style D fill:#d1e7dd,stroke:#146c43,color:#222
     style E fill:#d1e7dd,stroke:#146c43,color:#222
     style F fill:#d1e7dd,stroke:#146c43,color:#222
-    style H fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
+    style J fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
 ```
 
 - [x] **14.1 DONE** Add unique token issuance/expiry metadata, idle expiry checks, immediate browser clearance and pending-request cancellation, durable per-token fingerprint revocation, current-role authorization and restricted membership recovery. Applied additive migration and generated client; schema/status, both builds, lint/type checks, 114 backend tests and 108 distinct browser cases across regression/focused checks passed. Final focused browser run: 10/10, including real logout receipt/replay denial. [Guide](backend/docs/security-step-1-session-lifecycle.md). Expired-revocation pruning remains retention work; already-accepted writes are not rolled back by sign-out.
@@ -447,8 +457,9 @@ flowchart LR
     C --> D[15.4 Atomic audit records and Operations screen - DONE]
     D --> E[15.5 Failure diagnosis and retention verification - DONE]
     E --> F[16 Full-system testing - DONE]
-    F --> G[17 Containers and CI/CD - NEXT entire phase]
-    style G fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
+    F --> G[17 Containers and CI/CD - DONE locally]
+    G --> H[18 Production deployment - NEXT entire phase]
+    style H fill:#fff3cd,stroke:#9a6700,stroke-width:3px,color:#222
 ```
 
 - [x] **15.1 DONE** Server-generated request IDs, context-safe structured logs and submission/worker correlation; no arbitrary payload logging.
@@ -481,20 +492,28 @@ Flow: **known test data -> full user journeys -> failure scenarios -> release ch
 The profile is not a production load test; provider quota, large corpora, sustained
 traffic, container reproducibility and deployment remain outside this completion gate.
 
-### Phase 17 â€” App containers and CI/CD: make builds repeatable
+### Phase 17 â€” App containers and CI/CD: make builds repeatable (DONE locally)
 
 CI means automated checks when code changes. CD means a controlled deployment process.
 The Redis container already exists; this phase packages the application and its worker.
 
 Flow: **code change -> install -> build/test -> package -> approved deployment**.
 
-- [ ] **17.1** Add production build images for the API and worker, and a frontend build strategy.
-- [ ] **17.2** Add a local multi-service setup with shared file access for API/worker where needed.
-- [ ] **17.3** Add GitHub Actions checks with isolated PostgreSQL/Redis test services.
-- [ ] **17.4** Validate required settings and keep secrets outside committed configuration.
-- [ ] **17.5** Prepare deployment, database-migration, and rollback procedures.
+- [x] **17.1 DONE** Add non-root production images for the shared API/worker runtime, dedicated migration runner and validated static frontend/Nginx build.
+- [x] **17.2 DONE** Compose PostgreSQL, Redis, migrations, API, worker and frontend with health-ordered startup, configurable host ports, shared uploads and a writable model cache.
+- [x] **17.3 DONE** Add GitHub Actions application and image-build jobs with isolated pgvector/PostgreSQL and Redis services. The first hosted run remains external evidence.
+- [x] **17.4 DONE** Validate role-specific backend settings and frontend API URLs; keep secrets out of images and committed configuration; production dependency audits reported zero known vulnerabilities.
+- [x] **17.5 DONE** Document migration-first releases, health verification, application rollback, schema recovery and explicit limitations.
 
-Validation: a clean checkout can build and test; a failed check prevents release.
+**Phase 17 completion gate: PASSED on 2026-10-27 for the documented local/container workflow.**
+All images built. An isolated six-service stack applied 21 migrations, then a real
+upload crossed the shared volume and separate worker to READY. Backend passed 346/346,
+frontend utilities 15/15 and Chrome 117/117. The disposable stack and test volumes
+were removed. [Guide and evidence](backend/docs/phase-17-containers-and-delivery.md) and
+[future step-sized commits](backend/docs/phase-17-commit-plan.md).
+
+The first hosted GitHub Actions run, registry publication, production secrets, TLS,
+backups, object storage and public deployment remain Phase 18 work.
 
 ### Phase 18 â€” Deployment: run the application for real users
 
@@ -562,6 +581,8 @@ Useful existing evidence:
 - [15 Step-sized commit plan](backend/docs/phase-15-commit-plan.md)
 - [16 Full-system verification, live evaluation and measured limits](backend/docs/phase-16-full-system-verification.md)
 - [16 Step-sized commit plan](backend/docs/phase-16-commit-plan.md)
+- [17 Containers, CI checks, configuration and release procedures](backend/docs/phase-17-containers-and-delivery.md)
+- [17 Step-sized commit plan](backend/docs/phase-17-commit-plan.md)
 
 Before advancing a phase, check:
 
@@ -572,6 +593,7 @@ Before advancing a phase, check:
 - [ ] Any remaining limitation is visible here.
 - [ ] The tracker has been updated and I know the next step.
 
-**Next implementation: the entire Phase 17 (17.1-17.5). Explain containers, CI/CD,
-configuration, migrations and rollback with examples, then implement and validate
-the phase together. Step labels remain available for later commits.**
+**Next implementation: the entire Phase 18 (18.1-18.8). Choose hosting and budget,
+then configure production data services, object storage, API/worker, frontend/HTTPS,
+the live user journey, monitoring and recovery. Step labels remain available for
+later commits.**
