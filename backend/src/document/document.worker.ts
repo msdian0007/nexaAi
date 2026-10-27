@@ -3,6 +3,7 @@ import { createWorkerRedisConnection } from '../config/redis';
 import { DOCUMENT_JOB_NAME, DOCUMENT_QUEUE_NAME, parseDocumentJobData } from './document.queue';
 import { processDocument, markInterruptedDocumentFailed } from './document.processing';
 import { DocumentNotFoundError, DocumentProcessingConflictError } from './document.errors';
+import { withJobTrace, emit, type LogSink } from '../observability/telemetry';
 
 // Construction is explicit; importing this module never starts processing jobs.
 // A custom queue name is server/test configuration, never user-supplied request data.
@@ -10,6 +11,7 @@ export function createDocumentWorker(options: {
   queueName?: string; url?: string;
   // Server configuration; tests shorten these to exercise actual crash recovery.
   lockDuration?: number; stalledInterval?: number;
+  logSink?: LogSink;
 } = {}) {
   const queueName = options.queueName ?? DOCUMENT_QUEUE_NAME;
   if (!/^[a-zA-Z0-9_-]+$/.test(queueName)) throw new Error('Invalid document queue name.');
@@ -22,7 +24,8 @@ export function createDocumentWorker(options: {
       try { data = parseDocumentJobData(job.data); }
       catch { throw new UnrecoverableError('Invalid document job data.'); }
 
-      try {
+      return withJobTrace(data, String(job.id), async () => { try {
+        emit('stage_completed', { stage: 'queue', outcome: 'ok', durationMs: Math.max(0, Date.now() - job.timestamp) });
         // This service finds the document by BOTH IDs before reading its file or
         // changing its status. Queue payloads are instructions, not authorization.
         await processDocument(data.documentId, data.organizationId);
@@ -38,7 +41,7 @@ export function createDocumentWorker(options: {
         // BullMQ persists failure reasons/stacks. Do not copy raw extraction or
         // database errors into Redis: they can contain local paths or credentials.
         throw new Error('Document processing failed.');
-      }
+      } }, options.logSink, job.attemptsMade + 1);
     }, {
       connection,
       autorun: false,

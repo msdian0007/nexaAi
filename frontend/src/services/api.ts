@@ -2,13 +2,15 @@ export class ApiError extends Error {
   readonly status: number;
   readonly code?: string;
   readonly data?: unknown;
+  readonly requestId?: string;
 
-  constructor(message: string, status: number, code?: string, data?: unknown) {
+  constructor(message: string, status: number, code?: string, data?: unknown, requestId?: string) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.code = code;
     this.data = data;
+    this.requestId = requestId;
   }
 }
 
@@ -116,6 +118,7 @@ export function createApiClient(
           isRecord(payload) && payload.code === "DOCUMENT_QUEUE_UNAVAILABLE"
             ? payload.data
             : undefined,
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(response.headers.get("X-Request-ID") ?? "") ? response.headers.get("X-Request-ID")! : undefined,
         );
       }
       if (

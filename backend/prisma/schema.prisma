@@ -57,6 +57,22 @@ model Organization {
   memberships OrganizationMember[]
   documents Document[]
   invitations OrganizationInvitation[]
+  auditEvents AuditEvent[]
+}
+
+// Metadata only. Actors/targets are UUID snapshots, not names/emails or mutable
+// membership foreign keys. Deleting the organization deletes its audit history.
+model AuditEvent {
+  id String @id @default(uuid())
+  organizationId String
+  actorId String
+  action String @db.VarChar(48)
+  targetId String
+  requestId String?
+  createdAt DateTime @default(now())
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  @@index([organizationId, createdAt, id])
+  @@index([createdAt])
 }
 
 model OrganizationInvitation {

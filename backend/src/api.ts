@@ -9,11 +9,13 @@ import agentRoutes, { agentJsonError } from "./agents/agent.routes";
 import dashboardRoutes, { dashboardJsonError } from "./analytics/dashboard.routes";
 import { installApiBoundary, apiError } from "./http/api.boundary";
 import { installUsageAdmission, type AdmissionStore, type UsageBudgets } from "./http/usage.admission";
+import { requestTelemetry, type LogSink } from "./observability/telemetry";
 
 // The exact production middleware/routes can run on an ephemeral test port.
 // Starting the server and warming Redis belong only to the app.ts entry point.
-export function createApiApp(options: { origins?: string[]; admissionStore?: AdmissionStore; usageBudgets?: UsageBudgets } = {}) {
+export function createApiApp(options: { origins?: string[]; admissionStore?: AdmissionStore; usageBudgets?: UsageBudgets; logSink?: LogSink } = {}) {
   const app = express();
+  app.use(requestTelemetry(options.logSink));
   installApiBoundary(app, options.origins);
   installUsageAdmission(app, options.admissionStore, options.usageBudgets);
   app.use("/api/v1/auth", authRoutes, protectedRoutes, authJsonError);

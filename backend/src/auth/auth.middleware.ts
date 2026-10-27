@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import type { Role } from "../../generated/prisma/enums";
 import prisma from "../config/database";
 import { tokenFingerprint } from "./auth.tokens";
+import { identify } from "../observability/telemetry";
 
 export interface AuthenticatedRequest extends Request {
   user?: { userId: string; organizationId: string; role: Role };
@@ -38,6 +39,7 @@ export const authenticate = async (req: AuthenticatedRequest, res: Response, nex
     if (await prisma.revokedToken.findUnique({ where: { tokenHash }, select: { tokenHash: true } }))
       return deny("SESSION_REVOKED");
     req.user = identity;
+    identify(identity.userId, identity.organizationId);
     req.auth = { tokenHash, expiresAt };
     // Membership remains an executor/permission check: account-level list/switch
     // and logout must work after removal from the currently selected team.

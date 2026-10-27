@@ -53,7 +53,7 @@ export function installApiBoundary(app: Express, origins = allowedOrigins()) {
     next();
   });
   app.use(cors({ origin: (origin, callback) => callback(null, origin ? allowed.has(origin) : false),
-    methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"], allowedHeaders: ["Authorization", "Content-Type", "Accept"], exposedHeaders: ["Retry-After"], credentials: false, maxAge: 600 }));
+    methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"], allowedHeaders: ["Authorization", "Content-Type", "Accept"], exposedHeaders: ["Retry-After", "X-Request-ID"], credentials: false, maxAge: 600 }));
   app.use((req, _res, next) => {
     const hasBody = Number(req.headers["content-length"] ?? 0) > 0 || !!req.headers["transfer-encoding"];
     if (hasBody && req.path !== "/api/v1/documents/upload" && !req.is("application/json"))

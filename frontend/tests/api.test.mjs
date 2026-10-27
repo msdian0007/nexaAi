@@ -2,6 +2,13 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createApiClient, ApiError } from '../src/services/api.ts';
 
+test('safe errors retain only a valid server request identifier for support', async () => {
+  for (const value of ['7a2b8b6a-1111-4111-8111-123456789abc', 'PRIVATE_SERVER_VALUE']) {
+    const client = createApiClient('https://backend.example', async () => Response.json({ message: 'PRIVATE' }, { status: 503, headers: { 'X-Request-ID': value } }));
+    await assert.rejects(client('/operations/summary'), error => error instanceof ApiError && error.requestId === (value.startsWith('7a2b') ? value : undefined) && !error.message.includes('PRIVATE'));
+  }
+});
+
 test('rate limits display bounded wait times without retrying or revealing server messages', async () => {
   for (const [value, expected] of [['12', '12 seconds'], ['86400', '86400 seconds'], ['0', 'later'], ['999999999', 'later'], ['<script>PRIVATE</script>', 'later'], ['1.5', 'later']]) {
     let calls = 0;

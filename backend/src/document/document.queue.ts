@@ -1,9 +1,10 @@
 import { Queue } from 'bullmq';
 import { createRedisConnection } from '../config/redis';
+import { traceId, submitted } from '../observability/telemetry';
 
 export const DOCUMENT_QUEUE_NAME = 'nexaai-document-processing';
 export const DOCUMENT_JOB_NAME = 'process-document';
-export type DocumentJobData = { documentId: string; organizationId: string };
+export type DocumentJobData = { documentId: string; organizationId: string; requestId?: string };
 
 export class DocumentQueueUnavailableError extends Error {
   constructor() { super('Document processing queue is unavailable.'); }
@@ -19,10 +20,11 @@ export function parseDocumentJobData(value: unknown): DocumentJobData {
   const data = value as Partial<DocumentJobData> | null;
   const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   if (!data || typeof data.documentId !== 'string' || !uuid.test(data.documentId) ||
-      typeof data.organizationId !== 'string' || !uuid.test(data.organizationId)) {
+      typeof data.organizationId !== 'string' || !uuid.test(data.organizationId) ||
+      (data.requestId !== undefined && (typeof data.requestId !== 'string' || !uuid.test(data.requestId)))) {
     throw new Error('Document jobs require valid document and organization UUIDs.');
   }
-  return { documentId: data.documentId, organizationId: data.organizationId };
+  return { documentId: data.documentId, organizationId: data.organizationId, ...(data.requestId ? { requestId: data.requestId } : {}) };
 }
 
 // Bound readiness as well as individual commands. A silent Redis server must not
@@ -86,7 +88,9 @@ export async function createDocumentQueue(options: { url?: string; queueName?: s
       // (reserved by BullMQ). This is deduplication, not exactly-once execution.
       const jobId = `document-${data.organizationId}-${data.documentId}`;
       try {
-        await withDeadline(readyQueue.add(DOCUMENT_JOB_NAME, data, { jobId }));
+        const requestId = traceId();
+        await withDeadline(readyQueue.add(DOCUMENT_JOB_NAME, { ...data, ...(requestId ? { requestId } : {}) }, { jobId }));
+        submitted(data.documentId, data.organizationId, jobId);
         return { jobId };
       } catch { throw new DocumentQueueUnavailableError(); }
     },
@@ -112,6 +116,7 @@ export async function createDocumentQueue(options: { url?: string; queueName?: s
           return 1
         `, 2, readyQueue.toKey('failed'), readyQueue.toKey(jobId), jobId));
         await withDeadline(job.retry('failed', { resetAttemptsMade: true, resetAttemptsStarted: true }));
+        submitted(data.documentId, data.organizationId, jobId);
         return { jobId };
       } catch (error) {
         if (error instanceof DocumentQueueUnavailableError || connection.status !== 'ready') {
