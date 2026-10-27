@@ -1,0 +1,8 @@
+{
+  "name": "nexaai-migration-runner",
+  "private": true,
+  "dependencies": {
+    "dotenv": "17.4.2",
+    "prisma": "7.10.1"
+  }
+}

@@ -1,7 +1,13 @@
-import { pipeline, FeatureExtractionPipeline } from "@huggingface/transformers";
+import { env, pipeline, FeatureExtractionPipeline } from "@huggingface/transformers";
+import path from "node:path";
 import { EMBEDDING_PROFILE } from "./document.embedding.profile";
 
 let extractor: FeatureExtractionPipeline | null = null;
+
+// Keep downloaded models outside node_modules so a clean npm install does not
+// delete them. Containers override this with their shared writable model volume.
+env.cacheDir = process.env.TRANSFORMERS_CACHE?.trim() ||
+  path.resolve(process.cwd(), ".cache", "transformers");
 
 const getExtractor = async () => {
   if (!extractor) {
