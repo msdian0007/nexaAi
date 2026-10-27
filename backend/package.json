@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test:phase16": "npm run build && node scripts/verify-phase16.cjs",
+    "test:storage": "npm run build && node --test tests/document.storage.test.cjs tests/document.pipeline.e2e.test.cjs tests/document.deletion.integration.test.cjs",
     "benchmark:phase16": "npm run build && node scripts/benchmark-phase16.cjs",
     "evaluate:phase16:live": "npm run build && node scripts/evaluate-agent.cjs && node scripts/evaluate-rag.cjs",
     "config:check:api": "npm run build && node dist/src/config/runtime.cli.js api",
@@ -65,6 +66,7 @@
     "typescript": "^5.7.3"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.922.0",
     "@huggingface/transformers": "^4.3.0",
     "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.10.0",

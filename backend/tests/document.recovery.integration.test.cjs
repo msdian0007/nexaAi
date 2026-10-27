@@ -38,7 +38,7 @@ test('crashed work rolls back and Redis redelivers it safely', { timeout: 60000 
   try {
     const document = await prisma.document.create({ data: {
       name: 'Recovery fixture', originalName: 'fictional.txt', mimeType: 'text/plain', size: 40,
-      storagePath: 'unused-by-recovery-stub',
+      storagePath: path.join('uploads', 'documents', id, `${id}.txt`),
       organization: { create: { id, name: 'Recovery fixture', slug: `recovery-${id}` } },
       uploadedBy: { create: { id, name: 'Recovery fixture', email: `${id}@example.invalid`, password: 'unused' } },
     } });

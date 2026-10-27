@@ -3,6 +3,7 @@
 const { test, after } = require("node:test");
 const assert = require("node:assert/strict");
 const { randomUUID } = require("node:crypto");
+const path = require("node:path");
 const prisma = require("../dist/src/config/database").default;
 
 let extract;
@@ -42,7 +43,9 @@ async function withDocument(run) {
       originalName: "test.txt",
       mimeType: "text/plain",
       size: 4,
-      storagePath: "unused-by-test-stub.txt",
+      // The extractor is stubbed, but the production storage boundary still
+      // requires a tenant-owned generated reference before invoking it.
+      storagePath: path.join("uploads", "documents", id, `${id}.txt`),
       organization: { create: { id, name: "Processing test", slug: `processing-test-${id}` } },
       uploadedBy: { create: { id, name: "Processing test", email: `${id}@example.invalid`, password: "unused" } },
     },

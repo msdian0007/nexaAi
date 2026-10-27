@@ -3,6 +3,7 @@
 .env.*
 !.env.example
 !.env.container.example
+!.env.production.example
 
 # Uploaded documents are private runtime data, not source code.
 /backend/uploads/

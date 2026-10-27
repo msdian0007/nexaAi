@@ -5,15 +5,17 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const repo = path.resolve('..');
 
-test('environment variants and uploaded documents are ignored, while the safe example is shareable', () => {
+test('environment variants and uploaded documents are ignored, while placeholder examples are shareable', () => {
   for (const file of ['.env', '.env.production', 'backend/.env.test', 'frontend/.env', 'frontend/.env.production', 'backend/uploads/documents/fixture/private.txt']) {
     const result = spawnSync('git', ['check-ignore', '--no-index', '--quiet', file], { cwd: repo });
     assert.equal(result.status, 0, `Expected private path to be ignored: ${file}`);
   }
-  assert.equal(spawnSync('git', ['check-ignore', '--no-index', '--quiet', '.env.example'], { cwd: repo }).status, 1);
+  for (const example of ['.env.example', '.env.container.example', '.env.production.example']) {
+    assert.equal(spawnSync('git', ['check-ignore', '--no-index', '--quiet', example], { cwd: repo }).status, 1);
+  }
   const tracked = spawnSync('git', ['ls-files', '-z'], { cwd: repo, encoding: 'utf8' });
   assert.equal(tracked.status, 0);
-  assert.equal(tracked.stdout.split('\0').some(file => /(^|\/)\.env(?:\.|$)/.test(file) && !file.endsWith('.env.example')), false, 'An environment file is already tracked; ignore rules do not remove tracked files.');
+  assert.equal(tracked.stdout.split('\0').some(file => /(^|\/)\.env(?:\.|$)/.test(file) && !file.endsWith('.example')), false, 'A non-example environment file is already tracked; ignore rules do not remove tracked files.');
   assert.equal(tracked.stdout.split('\0').some(file => file.startsWith('backend/uploads/')), false, 'Uploaded files must be removed from the index as well as ignored.');
 });
 

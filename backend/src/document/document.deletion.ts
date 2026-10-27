@@ -1,9 +1,8 @@
-import fs from "node:fs/promises";
-import path from "node:path";
 import prisma from "../config/database";
 import { audit } from "../observability/audit";
 import type { Prisma } from "../../generated/prisma/client";
 import { getDocumentQueue, QueueProvider } from "./document.queue.runtime";
+import { deleteStoredDocument, validateDocumentStoragePath } from "./document.storage";
 
 export class DocumentDeletionError extends Error {
   constructor(public status: number, message: string) { super(message); }
@@ -35,38 +34,6 @@ export async function withDocumentSubmissionLock<T>(documentId: string, organiza
     return action();
   }, { timeout: 30000 });
 }
-function fileTarget(storagePath: string, organizationId: string) {
-  const root = path.resolve("uploads", "documents", organizationId);
-  const target = path.resolve(storagePath);
-  // Uploaded files must be direct children of their tenant folder. No traversal,
-  // directory target or foreign path can reach unlink below.
-  if (path.dirname(target) !== root || path.basename(target) === "." || path.basename(target) === "..")
-    throw new DocumentDeletionError(409, "Document storage location requires repair");
-  return { root, target };
-}
-async function unlinkDocumentFile(storagePath: string, organizationId: string) {
-  const { root, target } = fileTarget(storagePath, organizationId);
-  // Reject symlinks/junctions in every upload directory; delete only one exact
-  // regular file, never a directory or recursive path.
-  for (const directory of [path.resolve("uploads"), path.resolve("uploads", "documents"), root]) {
-    try {
-      const info = await fs.lstat(directory);
-      if (info.isSymbolicLink() || !info.isDirectory()) throw new Error("Unsafe upload directory");
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === "ENOENT") return;
-      throw error;
-    }
-  }
-  try {
-    const info = await fs.lstat(target);
-    if (!info.isFile() || info.isSymbolicLink()) throw new Error("Unsafe document file");
-    await fs.unlink(target);
-  } catch (error) {
-    // Missing files are already cleaned, including after a crash between unlink
-    // and the final database commit. Finish deletion can safely resume.
-    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
-  }
-}
 async function lockedDocument(tx: Prisma.TransactionClient, organizationId: string, userId: string, documentId: string) {
   // Match role/member changes and the worker's advisory lock. The role read is
   // current, and we refuse deletion while a processing transaction owns the file.
@@ -91,7 +58,8 @@ export async function deleteOrganizationDocument(
   // PostgreSQL, Redis and the filesystem cannot share one atomic transaction.
   await prisma.$transaction(async tx => {
     const document = await lockedDocument(tx, organizationId, userId, documentId);
-    fileTarget(document.storagePath, organizationId);
+    try { validateDocumentStoragePath(document.storagePath, organizationId); }
+    catch { throw new DocumentDeletionError(409, "Document storage location requires repair"); }
     await tx.document.update({ where: { id: documentId }, data: {
       deletionRequestedAt: document.deletionRequestedAt ?? new Date(), extractedText: null, errorMessage: null,
     } });
@@ -104,7 +72,7 @@ export async function deleteOrganizationDocument(
       const queue = await queueProvider();
       if (!await queue.removeIfIdle({ documentId, organizationId }))
         return { documentId, organizationId, deleted: false, cleanupPending: true };
-      await unlinkDocumentFile(document.storagePath, organizationId);
+      await deleteStoredDocument(document.storagePath, organizationId);
       // Citation snapshots have no document foreign key, so past answers survive.
       await tx.document.delete({ where: { id: documentId } });
       await audit(tx, organizationId, userId, "DOCUMENT_DELETED", documentId);

@@ -3,6 +3,7 @@ import prisma from "../config/database";
 import { createDocumentChunks } from "./document.chunk.service";
 import { embedDocumentChunks } from "./document.embedding.service";
 import { extractTextFromDocument } from "./document.extractor";
+import { withStoredDocumentFile } from "./document.storage";
 import {
   DocumentNotFoundError,
   DocumentProcessingConflictError,
@@ -75,10 +76,9 @@ export const processDocument = async (
       });
       await tx.$executeRaw`SAVEPOINT document_work`;
       try {
-        const extractedText = await measure("extraction", () => extractTextFromDocument(
-          document.storagePath,
-          document.mimeType,
-        ));
+        const extractedText = await measure("extraction", () =>
+          withStoredDocumentFile(document.storagePath, organizationId, filePath =>
+            extractTextFromDocument(filePath, document.mimeType)));
         if (!extractedText.trim())
           throw new Error("No text could be extracted from the document");
         // All result writes share this transaction. An old attempt whose connection

@@ -1,6 +1,7 @@
 import { allowedOrigins } from "../http/api.boundary";
 import { usageBudgets } from "../http/usage.admission";
 import { getRedisUrl } from "./redis";
+import { documentStorageConfig } from "../document/document.storage";
 
 export type RuntimeRole = "api" | "worker" | "migration";
 
@@ -25,6 +26,7 @@ export function validateRuntimeConfig(role: RuntimeRole, env: NodeJS.ProcessEnv 
   databaseUrl(env);
   if (role === "migration") return;
   getRedisUrl(required(env, "REDIS_URL"));
+  documentStorageConfig(env);
   if (role === "worker") return;
 
   const nodeEnv = required(env, "NODE_ENV");

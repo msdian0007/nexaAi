@@ -8,7 +8,7 @@ import { AuthenticatedRequest } from "../auth/auth.middleware";
 import path from "path";
 import { randomUUID } from "node:crypto";
 import prisma from "../config/database";
-import { removeUnacceptedUpload } from "./document.upload";
+import { deleteStoredDocument, putStoredDocument, storagePathFor } from "./document.storage";
 import { getDocumentQueue, QueueProvider } from "./document.queue.runtime";
 import { DocumentJobRetryError } from "./document.queue";
 import { deleteOrganizationDocument, DocumentDeletionError, requireProcessingMembership, withDocumentSubmissionLock } from "./document.deletion";
@@ -205,16 +205,23 @@ export const uploadDocument = async (
   // Keep an identity before the transaction, so a lost commit acknowledgement
   // can be reconciled without deleting a file belonging to a committed record.
   const documentId = randomUUID();
+  const organizationId = req.user.organizationId;
+  const storagePath = storagePathFor(organizationId, documentId, req.file.originalname);
+  let storageAttempted = false;
   try {
+    // Store private bytes first. If the following database commit is known to be
+    // absent, the catch path removes this exact generated object.
+    storageAttempted = true;
+    await putStoredDocument(storagePath, organizationId, documentId, req.file.mimetype, req.file.buffer);
     const document = await createDocument({
       id: documentId,
-      organizationId: req.user.organizationId,
+      organizationId,
       uploadedById: req.user.userId,
-      name: req.file.filename,
+      name: path.basename(storagePath),
       originalName: req.file.originalname,
       mimeType: req.file.mimetype,
       size: req.file.size,
-      storagePath: path.relative(process.cwd(), req.file.path),
+      storagePath,
     });
     saved = true;
     try {
@@ -261,7 +268,7 @@ export const uploadDocument = async (
       } catch {
         return res.status(503).json({ success: false, code: "UPLOAD_SAVE_UNCONFIRMED", message: "File saving could not be confirmed. Refresh the document library before uploading again." });
       }
-      try { await removeUnacceptedUpload(req); }
+      try { if (storageAttempted) await deleteStoredDocument(storagePath, organizationId); }
       catch { return res.status(503).json({ success: false, code: "UPLOAD_CLEANUP_UNCONFIRMED", message: "File cleanup could not be confirmed." }); }
     }
     if (error instanceof DocumentDeletionError && error.status === 403)

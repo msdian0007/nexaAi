@@ -4,6 +4,7 @@ import { authenticate, type AuthenticatedRequest } from "../auth/auth.middleware
 import { requestFields, UUID } from "../http/api.boundary";
 import { getDocumentQueue } from "../document/document.queue.runtime";
 import { measure } from "./telemetry";
+import { checkDocumentStorage } from "../document/document.storage";
 
 const router = Router();
 router.use(authenticate);
@@ -71,7 +72,7 @@ router.get("/summary", requestFields(), async (req: AuthenticatedRequest, res) =
 export default router;
 
 export async function readiness(req: import("express").Request, res: import("express").Response) {
-  let database = false, redis = false;
+  let database = false, redis = false, storage = false;
   // The outer deadline bounds the probe response; it does not cancel a database
   // command already submitted. Normal driver connection limits still apply.
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -81,5 +82,7 @@ export async function readiness(req: import("express").Request, res: import("exp
   } catch { /* Return status only, never a connection error or URL. */ }
   finally { clearTimeout(timer); }
   try { redis = await (await (req.app.locals.getDocumentQueue ?? getDocumentQueue)()).checkConnection(); } catch { /* Safe degraded probe. */ }
-  return res.status(database && redis ? 200 : 503).json({ success: database && redis, data: { status: database && redis ? "ready" : "not_ready", database, redis } });
+  try { storage = await checkDocumentStorage(); } catch { /* Never expose bucket or credential details. */ }
+  const ready = database && redis && storage;
+  return res.status(ready ? 200 : 503).json({ success: ready, data: { status: ready ? "ready" : "not_ready", database, redis, storage } });
 }

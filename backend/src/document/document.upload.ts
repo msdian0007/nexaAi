@@ -1,10 +1,8 @@
 import multer from "multer";
 import path from "node:path";
-import fs from "node:fs/promises";
-import { randomUUID } from "node:crypto";
 import type { RequestHandler, ErrorRequestHandler } from "express";
 import type { AuthenticatedRequest } from "../auth/auth.middleware";
-import { ApiInputError, UUID } from "../http/api.boundary";
+import { ApiInputError } from "../http/api.boundary";
 import { requireProcessingMembership, DocumentDeletionError } from "./document.deletion";
 
 export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
@@ -12,22 +10,6 @@ const mimeByExtension: Record<string, string> = {
   ".txt": "text/plain", ".pdf": "application/pdf",
   ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 };
-const directory = (organizationId: string) => path.resolve("uploads", "documents", organizationId);
-
-export async function removeUnacceptedUpload(req: AuthenticatedRequest) {
-  if (!req.file || !req.user) return;
-  const target = path.resolve(req.file.path);
-  // Only remove this request's exact generated regular file, never a directory
-  // or a user-supplied path. Saved records/uncertain queue submissions keep files.
-  if (path.dirname(target) !== directory(req.user.organizationId) ||
-    !/^[0-9a-f-]{36}\.(txt|pdf|docx)$/.test(path.basename(target))) throw new Error("Unsafe upload cleanup target");
-  try {
-    const info = await fs.lstat(target);
-    if (!info.isFile() || info.isSymbolicLink()) throw new Error("Unsafe upload cleanup file");
-    await fs.unlink(target);
-  } catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; }
-}
-
 export const permitUpload: RequestHandler = async (request: AuthenticatedRequest, _res, next) => {
   try {
     if (Object.keys(request.query).length) throw new ApiInputError();
@@ -41,24 +23,9 @@ export const permitUpload: RequestHandler = async (request: AuthenticatedRequest
     return next(error instanceof ApiInputError ? error : new ApiInputError(503, "UPLOAD_UNAVAILABLE", "Upload access could not be verified."));
   }
 };
-const storage = multer.diskStorage({
-  destination: (request, _file, callback) => {
-    const req = request as AuthenticatedRequest;
-    const organizationId = req.user?.organizationId;
-    if (!organizationId || !UUID.test(organizationId)) return callback(new Error("Invalid identity"), "");
-    const root = directory(organizationId);
-    void (async () => {
-      await fs.mkdir(root, { recursive: true });
-      for (const dir of [path.resolve("uploads"), path.resolve("uploads", "documents"), root]) {
-        const info = await fs.lstat(dir);
-        if (!info.isDirectory() || info.isSymbolicLink()) throw new Error("Unsafe upload directory");
-      }
-      callback(null, root);
-    })().catch(() => callback(new Error("Upload storage unavailable"), ""));
-  },
-  filename: (_req, file, callback) => callback(null, `${randomUUID()}${path.extname(file.originalname).toLowerCase()}`),
-});
-export const receiveUpload = multer({ storage,
+// Ten MiB is deliberately small enough to validate in memory before any bytes
+// are committed to local or S3-compatible storage.
+export const receiveUpload = multer({ storage: multer.memoryStorage(),
   limits: { fileSize: MAX_UPLOAD_BYTES, files: 1, fields: 0, parts: 1, fieldNameSize: 100 },
   fileFilter: (_req, file, callback) => {
     const extension = path.extname(file.originalname).toLowerCase();
@@ -73,7 +40,7 @@ export const inspectUpload: RequestHandler = async (request: AuthenticatedReques
   try {
     if (!request.file) throw new ApiInputError(400, "MISSING_UPLOAD", "Choose one document file.");
     if (!request.file.size) throw new ApiInputError(400, "EMPTY_UPLOAD", "The file must contain content.");
-    const buffer = await fs.readFile(request.file.path); // Multer already caps it at 10 MiB.
+    const buffer = request.file.buffer; // Multer already caps it at 10 MiB.
     let valid = false;
     if (request.file.mimetype === "text/plain") {
       try { valid = !buffer.includes(0) && !!new TextDecoder("utf-8", { fatal: true }).decode(buffer).trim(); }
@@ -85,8 +52,6 @@ export const inspectUpload: RequestHandler = async (request: AuthenticatedReques
     if (!valid) throw new ApiInputError(415, "INVALID_FILE_CONTENT", "The file content does not match the selected document format.");
     return next();
   } catch (error) {
-    try { await removeUnacceptedUpload(request); }
-    catch { return next(new ApiInputError(503, "UPLOAD_CLEANUP_UNCONFIRMED", "Upload was rejected but file cleanup could not be confirmed.")); }
     return next(error instanceof ApiInputError ? error : new ApiInputError(503, "UPLOAD_UNAVAILABLE", "The uploaded file could not be checked."));
   }
 };

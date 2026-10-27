@@ -39,9 +39,11 @@ test('document worker processes isolated jobs with real infrastructure', { timeo
     } });
     created = true;
     await fs.mkdir(directory, { recursive: true });
-    const storagePath = path.join(directory, 'fictional-handbook.txt');
+    const documentId = randomUUID();
+    const storagePath = path.join(directory, `${documentId}.txt`);
     await fs.writeFile(storagePath, text);
     const document = await prisma.document.create({ data: {
+      id: documentId,
       organizationId: id, uploadedById: id, name: 'fictional-handbook.txt', originalName: 'fictional-handbook.txt',
       mimeType: 'text/plain', size: Buffer.byteLength(text), storagePath,
     } });
@@ -94,9 +96,11 @@ test('document worker processes isolated jobs with real infrastructure', { timeo
     });
 
     await t.test('a missing file fails the job and document without copying its path into the job error', async () => {
+      const brokenId = randomUUID();
       const broken = await prisma.document.create({ data: {
+        id: brokenId,
         organizationId: id, uploadedById: id, name: 'missing.txt', originalName: 'missing.txt',
-        mimeType: 'text/plain', size: 1, storagePath: path.join(directory, 'missing.txt'),
+        mimeType: 'text/plain', size: 1, storagePath: path.join(directory, `${brokenId}.txt`),
       } });
       const result = await producer.enqueue({ documentId: broken.id, organizationId: id });
       const job = await terminal(result.jobId);
