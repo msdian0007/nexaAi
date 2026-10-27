@@ -1,3 +1,4 @@
+import { audit } from "../observability/audit";
 import prisma from "../config/database";
 import { DocumentDeletionError } from "./document.deletion";
 import { getDocumentQueue, QueueProvider } from "./document.queue.runtime";
@@ -106,7 +107,7 @@ export const createDocument = async (data: CreateDocumentInput) => {
       where: { userId_organizationId: { userId: data.uploadedById, organizationId: data.organizationId } }, select: { id: true },
     });
     if (!member) throw new DocumentDeletionError(403, "Current membership is required");
-    return tx.document.create({
+    const created = await tx.document.create({
     data: {
       id: data.id,
       organizationId: data.organizationId,
@@ -118,5 +119,7 @@ export const createDocument = async (data: CreateDocumentInput) => {
       storagePath: data.storagePath,
     },
     });
+    await audit(tx, data.organizationId, data.uploadedById, "DOCUMENT_UPLOADED", created.id);
+    return created;
   });
 };

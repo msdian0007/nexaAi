@@ -1,4 +1,5 @@
 import prisma from "../config/database";
+import { audit } from "../observability/audit";
 import type { AgentContext, AgentToolResult } from "./agent.contracts";
 import { AgentContractError, parseAgentToolCall } from "./agent.contracts";
 import { readAgentContext, requireAgentMembership } from "./agent.access";
@@ -87,6 +88,9 @@ export async function confirmDocumentRetry(authenticatedContext: AgentContext, v
     const claimed = await tx.agentRetryProposal.updateMany({ where: { id, ...context, state: "PENDING", expiresAt: { gt: now } },
       data: { state: "CLAIMED", consumedAt: now } });
     if (!claimed.count) throw new AgentActionError("PROPOSAL_USED", 409, "Proposal was already used or cancelled. Refresh document status.");
+    // Record the one-time request, not a false claim that Redis/processing already
+    // succeeded. This commits with the proposal claim before external submission.
+    await audit(tx, context.organizationId, context.userId, "DOCUMENT_RETRY_REQUESTED", row.documentId);
     return row;
   });
 

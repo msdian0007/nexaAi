@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import prisma from "../config/database";
+import { audit } from "../observability/audit";
 import type { Prisma } from "../../generated/prisma/client";
 import { getDocumentQueue, QueueProvider } from "./document.queue.runtime";
 
@@ -95,6 +96,7 @@ export async function deleteOrganizationDocument(
       deletionRequestedAt: document.deletionRequestedAt ?? new Date(), extractedText: null, errorMessage: null,
     } });
     await tx.documentChunk.deleteMany({ where: { documentId } });
+    if (!document.deletionRequestedAt) await audit(tx, organizationId, userId, "DOCUMENT_DELETION_REQUESTED", documentId);
   }, { timeout: 15000 });
   try {
     return await prisma.$transaction(async tx => {
@@ -105,6 +107,7 @@ export async function deleteOrganizationDocument(
       await unlinkDocumentFile(document.storagePath, organizationId);
       // Citation snapshots have no document foreign key, so past answers survive.
       await tx.document.delete({ where: { id: documentId } });
+      await audit(tx, organizationId, userId, "DOCUMENT_DELETED", documentId);
       return { documentId, organizationId, deleted: true, cleanupPending: false };
     }, { timeout: 30000 });
   } catch (error) {

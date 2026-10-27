@@ -1,3 +1,4 @@
+import { audit } from "../observability/audit";
 import { measure } from "../observability/telemetry";
 import { Role, Prisma } from "../../generated/prisma/client";
 import prisma from "../config/database";
@@ -56,6 +57,7 @@ export const updateOrganizationProfile = (
       data: { name },
       select: publicProfile,
     });
+    await audit(tx, organizationId, userId, "ORGANIZATION_UPDATED", organizationId);
     return { ...organization, role, canEdit: true };
   });
 
@@ -129,10 +131,12 @@ export const addOrganizationMember = (
         409,
         "User is already a member of this organization",
       );
-    return tx.organizationMember.create({
+    const member = await tx.organizationMember.create({
       data: { organizationId, userId: user.id, role },
       include: { user: { select: publicUser } },
     });
+    await audit(tx, organizationId, userId, "MEMBER_ADDED", member.id);
+    return member;
   });
 
 export const updateMemberRole = (
@@ -159,11 +163,13 @@ export const updateMemberRole = (
         "Organization owner role cannot be changed",
       );
     requireOwner(actorRole);
-    return tx.organizationMember.update({
+    const member = await tx.organizationMember.update({
       where: { id: target.id },
       data: { role },
       include: { user: { select: publicUser } },
     });
+    if (target.role !== role) await audit(tx, organizationId, userId, "MEMBER_ROLE_CHANGED", member.id);
+    return member;
   });
 
 export const removeOrganizationMember = (
@@ -190,6 +196,7 @@ export const removeOrganizationMember = (
     // Existing schema behavior: deleting a membership also deletes that member's
     // private conversations/messages in this organization, not their user account.
     await tx.organizationMember.delete({ where: { id: target.id } });
+    await audit(tx, organizationId, userId, "MEMBER_REMOVED", target.id);
     return { message: "Member removed successfully" };
   });
 
@@ -276,6 +283,7 @@ export const createOrganizationInvitation = (
       },
       select: invitationSelect,
     });
+    await audit(tx, organizationId, userId, "INVITATION_CREATED", invitation.id);
     return { invitation, token };
   });
 
@@ -301,11 +309,13 @@ export const revokeOrganizationInvitation = (
         409,
         "Invitation is already revoked",
       );
-    return tx.organizationInvitation.update({
+    const revoked = await tx.organizationInvitation.update({
       where: { id: invitation.id },
       data: { revokedAt: new Date() },
       select: invitationSelect,
     });
+    await audit(tx, organizationId, userId, "INVITATION_REVOKED", invitation.id);
+    return revoked;
   });
 
 export const acceptOrganizationInvitation = (userId: string, token: string) =>
@@ -361,6 +371,7 @@ export const acceptOrganizationInvitation = (userId: string, token: string) =>
       where: { id: invitation.id },
       data: { acceptedAt: new Date(), acceptedById: userId },
     });
+    await audit(tx, invitation.organizationId, userId, "INVITATION_ACCEPTED", invitation.id);
     return { organization: invitation.organization, role: membership.role };
   });
 
@@ -415,5 +426,6 @@ export const registerFromOrganizationInvitation = (data: {
       where: { id: invitation.id },
       data: { acceptedAt: new Date(), acceptedById: user.id },
     });
+    await audit(tx, invitation.organizationId, user.id, "INVITATION_ACCEPTED", invitation.id);
     return { user, organization: invitation.organization, membership };
   });
