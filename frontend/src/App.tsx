@@ -1,11 +1,13 @@
 import {
   BrowserRouter,
   Link,
+  NavLink,
   Navigate,
   Route,
   Routes,
   useLocation,
 } from "react-router-dom";
+import type { ReactNode } from "react";
 import { AuthForm } from "./features/auth/AuthForm";
 import { AuthProvider } from "./features/auth/AuthProvider";
 import { useAuth } from "./features/auth/auth.context";
@@ -23,6 +25,42 @@ import {
   InvitationsPage,
   AcceptInvitationPage,
 } from "./features/organization/InvitationsPage";
+
+type NavigationIconName =
+  | "dashboard"
+  | "documents"
+  | "chat"
+  | "agent"
+  | "organization"
+  | "operations"
+  | "switch";
+
+function NavigationIcon({ name }: { name: NavigationIconName }) {
+  const paths: Record<NavigationIconName, ReactNode> = {
+    dashboard: <><rect x="3" y="3" width="7" height="7" rx="2" /><rect x="14" y="3" width="7" height="7" rx="2" /><rect x="3" y="14" width="7" height="7" rx="2" /><rect x="14" y="14" width="7" height="7" rx="2" /></>,
+    documents: <><path d="M7 3h7l4 4v14H7z" /><path d="M14 3v5h5M10 12h5M10 16h5" /></>,
+    chat: <><path d="M4 5h16v11H9l-5 4z" /><path d="M8 9h8M8 13h5" /></>,
+    agent: <><path d="m12 3 1.4 4.1L17.5 8.5l-4.1 1.4L12 14l-1.4-4.1-4.1-1.4 4.1-1.4z" /><path d="m18.5 14 .8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8zM5 15l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z" /></>,
+    organization: <><circle cx="9" cy="8" r="3" /><circle cx="17" cy="9" r="2.5" /><path d="M3.5 20v-2.5A4.5 4.5 0 0 1 8 13h2a4.5 4.5 0 0 1 4.5 4.5V20M15 14h1.5a4 4 0 0 1 4 4v2" /></>,
+    operations: <><path d="M4 12h3l2-5 4 10 2-5h5" /><circle cx="12" cy="12" r="9" /></>,
+    switch: <><path d="M4 8h13M14 5l3 3-3 3M20 16H7M10 13l-3 3 3 3" /></>,
+  };
+  return (
+    <svg className="nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+      {paths[name]}
+    </svg>
+  );
+}
+
+const workspaceLinks: Array<{ to: string; label: string; icon: NavigationIconName }> = [
+  { to: "/dashboard", label: "Dashboard", icon: "dashboard" },
+  { to: "/documents", label: "Documents", icon: "documents" },
+  { to: "/chat", label: "Chat", icon: "chat" },
+  { to: "/agent", label: "Agent", icon: "agent" },
+  { to: "/organization", label: "Organization", icon: "organization" },
+  { to: "/operations", label: "Operations", icon: "operations" },
+  { to: "/organizations/switch", label: "Switch organization", icon: "switch" },
+];
 
 function AuthPage({ mode }: { mode: "login" | "register" }) {
   const { status, signIn, notice } = useAuth();
@@ -60,49 +98,71 @@ function AuthPage({ mode }: { mode: "login" | "register" }) {
 
 function AppRoutes() {
   const { status, signOut, session } = useAuth();
+  const workspaceVisible = status !== "anonymous";
   return (
-    <div className="app-shell">
+    <div className={`app-shell${workspaceVisible ? " app-shell--workspace" : ""}`}>
+      <a className="skip-link" href="#main-content">Skip to content</a>
       <header className="app-header">
-        <Link className="brand" to="/">
-          {" "}
+        <Link className="brand" to="/" aria-label="NexaAI home">
           <span className="brand-mark" aria-hidden="true">
             N
-          </span>{" "}
-          NexaAI
+          </span>
+          <span className="brand-copy">
+            <strong>NexaAI</strong>
+            <small>Knowledge workspace</small>
+          </span>
         </Link>
-        {status !== "anonymous" && (
+        {workspaceVisible && session && (
+          <div className="workspace-identity">
+            <span className="workspace-avatar" aria-hidden="true">
+              {session.organization.name.trim().charAt(0).toUpperCase() || "N"}
+            </span>
+            <span>
+              <small>Current workspace</small>
+              <strong>{session.organization.name} workspace</strong>
+            </span>
+          </div>
+        )}
+        {workspaceVisible && (
           <nav aria-label="Workspace">
-            {status === "restricted" && <Link className="text-button" to="/organizations/switch">Switch organization</Link>}
+            {status === "restricted" && (
+              <NavLink className={({ isActive }) => `nav-link${isActive ? " active" : ""}`} to="/organizations/switch">
+                <NavigationIcon name="switch" />
+                <span>Switch organization</span>
+              </NavLink>
+            )}
             {status === "authenticated" && (
-              <>
-                <Link className="text-button" to="/dashboard">
-                  Dashboard
-                </Link>{" "}
-                <Link className="text-button" to="/documents">
-                  Documents
-                </Link>{" "}
-                <Link className="text-button" to="/chat">
-                  Chat
-                </Link>{" "}
-                <Link className="text-button" to="/agent">
-                  Agent
-                </Link>{" "}
-                <Link className="text-button" to="/organization">
-                  Organization
-                </Link>
-                <Link className="text-button" to="/operations">Operations</Link>
-                <Link className="text-button" to="/organizations/switch">
-                  Switch organization
-                </Link>
-              </>
-            )}{" "}
-            <button className="secondary-button" onClick={signOut}>
-              Sign out
-            </button>
+              workspaceLinks.map((item) => (
+                <NavLink
+                  key={item.to}
+                  className={({ isActive }) => `nav-link${isActive ? " active" : ""}`}
+                  to={item.to}
+                >
+                  <NavigationIcon name={item.icon} />
+                  <span>{item.label}</span>
+                </NavLink>
+              ))
+            )}
           </nav>
         )}
+        {workspaceVisible && (
+          <div className="sidebar-footer">
+            {session && (
+              <div className="signed-in-user">
+                <span className="user-avatar" aria-hidden="true">{session.user.name.trim().charAt(0).toUpperCase() || "U"}</span>
+                <span>
+                  <strong>{session.user.name}</strong>
+                  <small>{session.role} role</small>
+                </span>
+              </div>
+            )}
+            <button className="signout-button" onClick={signOut}>
+              Sign out
+            </button>
+          </div>
+        )}
       </header>
-      <main>
+      <main className="app-main" id="main-content">
         {/* Recreate every page on an organization change: drafts, selected chats,
             upload results and pending request cleanup belong to the old workspace. */}
         <Routes

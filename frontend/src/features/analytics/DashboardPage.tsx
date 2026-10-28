@@ -201,25 +201,29 @@ export function DashboardPage() {
       className="workspace dashboard-page"
       aria-labelledby="welcome-heading"
     >
-      <p className="eyebrow">YOUR WORKSPACE</p>
-      <h1 id="welcome-heading" tabIndex={-1} ref={heading}>
-        Welcome, {session.user.name}
-      </h1>
-      <p>You are signed in to {session.organization.name}.</p>
-      <dl className="account-details">
+      <header className="dashboard-heading">
         <div>
-          <dt>Email</dt>
-          <dd>{session.user.email}</dd>
+          <p className="eyebrow">YOUR WORKSPACE</p>
+          <h1 id="welcome-heading" tabIndex={-1} ref={heading}>
+            Welcome, {session.user.name}
+          </h1>
+          <p>You are signed in to {session.organization.name}.</p>
         </div>
-        <div>
-          <dt>Organization</dt>
-          <dd>{session.organization.name}</dd>
-        </div>
-        <div>
-          <dt>Role</dt>
-          <dd>{session.role}</dd>
-        </div>
-      </dl>
+        <dl className="account-details">
+          <div>
+            <dt>Email</dt>
+            <dd>{session.user.email}</dd>
+          </div>
+          <div>
+            <dt>Organization</dt>
+            <dd>{session.organization.name}</dd>
+          </div>
+          <div>
+            <dt>Role</dt>
+            <dd>{session.role}</dd>
+          </div>
+        </dl>
+      </header>
       <h2>Workspace summary</h2>
       <form
         className="dashboard-filters"
@@ -302,11 +306,14 @@ export function DashboardPage() {
             <strong>{data.daily[data.daily.length - 1].date}</strong> (UTC).
             Read at {new Date(data.asOf).toLocaleString()}.
           </p>
-          <div className="dashboard-cards">
-            <section
-              className="dashboard-card"
-              aria-labelledby="documents-card"
-            >
+          {/* On wide screens the cards and chart share a row. This compact
+              overview keeps the full dashboard useful at reduced browser zoom. */}
+          <div className="dashboard-insights">
+            <div className="dashboard-cards">
+              <section
+                className="dashboard-card"
+                aria-labelledby="documents-card"
+              >
               <h3 id="documents-card">Current documents</h3>
               <p>Shared · organization</p>
               <strong className="dashboard-number">
@@ -326,11 +333,11 @@ export function DashboardPage() {
                 Excludes documents pending deletion. Saved status, not live
                 queue status.
               </small>
-            </section>
-            <section
-              className="dashboard-card"
-              aria-labelledby="questions-card"
-            >
+              </section>
+              <section
+                className="dashboard-card"
+                aria-labelledby="questions-card"
+              >
               <h3 id="questions-card">My saved questions</h3>
               <p>Private · selected dates</p>
               <strong className="dashboard-number">
@@ -340,8 +347,8 @@ export function DashboardPage() {
                 Your retained chat questions. Assistant messages and agent
                 requests are excluded.
               </small>
-            </section>
-            <section className="dashboard-card" aria-labelledby="requests-card">
+              </section>
+              <section className="dashboard-card" aria-labelledby="requests-card">
               <h3 id="requests-card">My agent requests</h3>
               <p>Private · selected dates</p>
               <strong className="dashboard-number">
@@ -363,12 +370,12 @@ export function DashboardPage() {
                 Excludes confirmations and cancellations. Succeeded does not
                 mean a correct answer or completed document retry.
               </small>
-            </section>
-          </div>
-          <section
-            className="dashboard-activity"
-            aria-labelledby="activity-heading"
-          >
+              </section>
+            </div>
+            <section
+              className="dashboard-activity"
+              aria-labelledby="activity-heading"
+            >
             <h2 id="activity-heading">Daily activity</h2>
             <p>
               Uploads are shared across the organization. Questions and agent
@@ -386,7 +393,8 @@ export function DashboardPage() {
               Counts describe retained records. Deleting documents or
               conversations can lower earlier counts.
             </p>
-          </section>
+            </section>
+          </div>
           <button
             className="secondary-button"
             onClick={() => {

@@ -4,6 +4,7 @@ import { login, register, registerInvitation } from "./auth.api";
 import type { AuthSession } from "./auth.api";
 import { ApiError } from "../../services/api";
 import { useLocation, useNavigate } from "react-router-dom";
+import heroArtwork from "../../assets/hero.png";
 
 export function AuthForm({
   onAuthenticated,
@@ -100,6 +101,16 @@ export function AuthForm({
         <p>
           Bring your organization’s documents and questions together in NexaAI.
         </p>
+        <div className="auth-visual" aria-hidden="true">
+          <span className="auth-orbit auth-orbit-one" />
+          <span className="auth-orbit auth-orbit-two" />
+          <img src={heroArtwork} alt="" />
+        </div>
+        <ul className="auth-benefits" aria-label="NexaAI features">
+          <li>Private team knowledge</li>
+          <li>Answers with sources</li>
+          <li>Fast document search</li>
+        </ul>
       </div>
       <div className="auth-card">
         <h2 ref={heading} tabIndex={-1}>
@@ -206,7 +217,8 @@ export function AuthForm({
           </button>
         </p>
         <p className="session-note">
-          You’ll need to sign in again if you refresh or close this page.
+          Your session stays available when you refresh this tab and is removed
+          when the tab is closed or you sign out.
         </p>
       </div>
     </section>
