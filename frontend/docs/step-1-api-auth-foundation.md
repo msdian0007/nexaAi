@@ -45,4 +45,4 @@ npm.cmd run lint
 
 The tests run on the project's Node 22 environment with controlled HTTP responses. They check JSON and Bearer headers, path restrictions, error sanitization, unexpected payloads, network failures and cancellation. They do not create real accounts or call Gemini.
 
-This step does not change the visible dashboard. The next step adds login/register screens and in-memory session state, connecting these functions to a user-facing flow. Protected dashboard navigation and the chat interface follow in separate steps.
+This step does not change the visible dashboard. The next step adds login/register screens and browser session state, connecting these functions to a user-facing flow. The session was later upgraded to survive same-tab refresh through verified `sessionStorage`. Protected dashboard navigation and the chat interface follow in separate steps.

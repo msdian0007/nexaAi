@@ -19,7 +19,7 @@ Registration follows the same sequence, adding full name and organization name a
 
 ## What session state means
 
-The session is the backend's token plus user, organization and role metadata held in React memory. No password or token is written to localStorage, sessionStorage or cookies. Refreshing closes that in-memory session and shows login again. This is deliberate for this step; durable login can be designed separately.
+The session is the backend's token plus user, organization and role metadata. NexaAI keeps it in `sessionStorage`, so refreshing the same tab restores the candidate session. Before showing private content, the app calls `/auth/me` to verify its signature, revocation state, expiry and current organization access. Signing out, expiry or failed verification removes it. The token is never written to `localStorage`, and closing the tab removes the browser session.
 
 Sign out clears local state. It does not revoke the already-issued JWT on the server; that token retains its existing expiry. Likewise, conditionally showing the workspace is a UI behavior, not an authorization boundary. Express must validate tokens on every protected API call. Automatic session-expiry handling and protected navigation are subsequent work.
 

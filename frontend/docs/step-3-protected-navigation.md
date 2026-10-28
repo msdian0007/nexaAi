@@ -12,7 +12,7 @@ React Router now gives login, registration and the dashboard separate URLs:
 | /dashboard | Available only after session verification |
 | Anything else | Page-not-found screen with a home link |
 
-React Router changes pages within the running React app, preserving the in-memory session. A browser refresh still resets it. When hosting this frontend later, configure the host to serve index.html for frontend routes such as /dashboard; Vite's development server already handles them.
+React Router changes pages within the running React app. A browser refresh restores the tab-scoped session from `sessionStorage` and verifies it with the backend before protected content appears. Closing the tab or signing out removes the browser session. When hosting this frontend, configure the host to serve index.html for frontend routes such as /dashboard; Vite's development server already handles them.
 
 ## Why a shared provider?
 

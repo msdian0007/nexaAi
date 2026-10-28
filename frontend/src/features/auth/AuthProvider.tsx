@@ -6,12 +6,21 @@ import { getIdentity } from "./auth.api";
 import type { AuthSession } from "./auth.api";
 import { apiRequest, ApiError } from "../../services/api";
 import type { RequestOptions } from "../../services/api";
+import {
+  readStoredSession,
+  removeStoredSession,
+  storeSession,
+} from "./auth.storage";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<AuthSession | null>(null);
-  const [status, setStatus] = useState<AuthState["status"]>("anonymous");
+  const [session, setSession] = useState<AuthSession | null>(() =>
+    readStoredSession(),
+  );
+  const [status, setStatus] = useState<AuthState["status"]>(() =>
+    session ? "checking" : "anonymous",
+  );
   const [notice, setNotice] = useState("");
-  const current = useRef<AuthSession | null>(null);
+  const current = useRef<AuthSession | null>(session);
   const verification = useRef<AbortController | null>(null);
   const pending = useRef(new Set<AbortController>());
   const generation = useRef(0);
@@ -33,6 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       cancelPending();
       generation.current++;
       current.current = null;
+      removeStoredSession();
       setSession(null);
       setStatus("anonymous");
       setNotice(message);
@@ -83,12 +93,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // A profile response cannot switch the signed-in organization.
       const next = { ...owner, organization };
       current.current = next;
+      storeSession(next);
       setSession(next);
     },
     [],
   );
 
-  async function verify(candidate: AuthSession) {
+  const verify = useCallback(async (candidate: AuthSession) => {
     verification.current?.abort();
     const controller = new AbortController();
     verification.current = controller;
@@ -116,6 +127,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       const verified = { ...candidate, role: identity.role, expiresAt };
       current.current = verified;
+      storeSession(verified);
       setSession(verified);
       setStatus("authenticated");
     } catch (error) {
@@ -130,7 +142,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         clear("Your session has expired. Please sign in again.");
       else setStatus("unavailable");
     }
-  }
+  }, [cancelPending, clear]);
+
+  useEffect(() => {
+    // A restored token is never trusted by itself. Verify its signature,
+    // revocation state, expiry and current organization membership first.
+    const candidate = current.current;
+    if (candidate) void verify(candidate);
+  }, [verify]);
 
   function signIn(candidate: AuthSession) {
     if (
@@ -155,6 +174,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     cancelPending();
     generation.current++;
     current.current = candidate;
+    storeSession(candidate);
     setSession(candidate);
     setNotice("");
     void verify(candidate);
@@ -255,7 +275,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signal,
     });
     // A late switch must not overwrite a newer login, logout, or switch. Validate
-    // both account and target before replacing the in-memory session.
+    // both account and target before replacing the active stored session.
     if (signal.aborted || current.current !== owner)
       throw new DOMException("Session changed", "AbortError");
     if (

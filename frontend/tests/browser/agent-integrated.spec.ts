@@ -81,7 +81,9 @@ test('Chrome completes real auth, counts, cited knowledge, cancellation, confirm
     await expect(card).toContainText(fixture.retryId);
     await page.getByRole('link', { name: 'Agent', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Review proposal', exact: true }).first()).toBeVisible();
-    await page.reload(); await expect(page).toHaveURL(/\/login$/); await login();
+    await page.reload();
+    await expect(page).toHaveURL(/\/agent$/);
+    await expect(page.getByRole('heading', { name: 'Agent', exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Review proposal', exact: true }).first().click();
     await expect(page.getByRole('heading', { name: 'Review document retry' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Confirm retry', exact: true })).toBeDisabled();

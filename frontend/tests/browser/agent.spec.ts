@@ -193,7 +193,7 @@ test('bad acknowledgement cannot enable another confirmation; records can be ref
   await expect(page.getByRole('button', { name: 'Confirm retry', exact: true })).toBeDisabled();
 });
 
-test('leaving the page ignores a late answer and signed-out direct access goes to login', async ({ page }) => {
+test('leaving the page ignores a late answer and refresh restores the verified session', async ({ page }) => {
   let release!: () => void;
   const gate = new Promise<void>(resolve => { release = resolve; });
   await page.route('**/agents/requests', async route => { await gate; await route.fulfill({ json: envelope(counts) }).catch(() => {}); });
@@ -202,8 +202,13 @@ test('leaving the page ignores a late answer and signed-out direct access goes t
   await page.getByRole('link', { name: 'Dashboard', exact: true }).click(); release();
   await page.getByRole('link', { name: 'Agent', exact: true }).click();
   await expect(page.getByRole('region', { name: 'Agent result', exact: true })).toHaveCount(0);
-  await expect(page.getByLabel('Your agent request')).toHaveValue('');
-  await page.reload(); await expect(page).toHaveURL(/\/login$/);
+  // Select the form control by role after navigation so the assertion cannot
+  // accidentally resolve the visible label while React remounts the page.
+  await expect(page.getByRole('textbox', { name: 'Your agent request' })).toHaveValue('');
+  await page.reload();
+  await expect(page).toHaveURL(/\/agent$/);
+  await expect(page.getByRole('heading', { name: 'Agent', exact: true })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Agent result', exact: true })).toHaveCount(0);
 });
 
 test('organization switching clears agent drafts, result and old execution records', async ({ page }) => {

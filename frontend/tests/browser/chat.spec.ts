@@ -109,7 +109,7 @@ test('rejects invalid response mappings and limits input; narrow screen has no o
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
-test('leaving chat ignores late results and direct signed-out access returns to login', async ({ page }) => {
+test('leaving chat ignores late results and refresh restores an empty verified chat page', async ({ page }) => {
   let release!: () => void;
   const gate = new Promise<void>(resolve => { release = resolve; });
   await page.route('**/api/v1/chat/query', async route => {
@@ -123,5 +123,7 @@ test('leaving chat ignores late results and direct signed-out access returns to 
   await page.getByRole('link', { name: 'Chat', exact: true }).click();
   await expect(page.locator('.answer-panel')).toHaveCount(0);
   await page.reload();
-  await expect(page).toHaveURL(/\/login$/);
+  await expect(page).toHaveURL(/\/chat$/);
+  await expect(page.getByLabel('Your question')).toHaveValue('');
+  await expect(page.locator('.answer-panel')).toHaveCount(0);
 });

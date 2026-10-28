@@ -93,8 +93,11 @@ controls the display; the server controls access. New tokens use the configured
 The frontend accepts an absent expiry field for a rollout against an older API;
 in that case it continues to rely on server 401 responses. New backend issuance
 always includes expiry, and backend authentication rejects tokens without `exp`.
-No refresh-token or “remember me” mechanism is added. Refreshing the page still
-loses the in-memory session and requires sign-in.
+No refresh-token or long-lived “remember me” mechanism is added. The frontend
+stores the current candidate session in tab-scoped `sessionStorage`, so a refresh
+can restore it. Private content remains hidden until `/auth/me` verifies the token,
+revocation record, expiry and current membership. Sign-out, expiry, failed
+verification or closing the tab removes the browser session.
 
 ## Example: demotion or removal while a token remains signed
 

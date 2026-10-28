@@ -21,7 +21,7 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-test("login shows returned identity, sign out clears it, and refresh loses the session", async ({
+test("login survives refresh in the same tab and sign out clears the stored session", async ({
   page,
 }) => {
   let calls = 0;
@@ -46,15 +46,21 @@ test("login shows returned identity, sign out clears it, and refresh loses the s
   await expect(page.getByText("Sample Team", { exact: true })).toBeVisible();
   expect(
     await page.evaluate(() => [localStorage.length, sessionStorage.length]),
-  ).toEqual([0, 0]);
+  ).toEqual([0, 1]);
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page.getByLabel("Password", { exact: true })).toHaveValue("");
+  expect(
+    await page.evaluate(() => [localStorage.length, sessionStorage.length]),
+  ).toEqual([0, 0]);
   await signIn();
   await page.reload();
   await expect(
-    page.getByRole("heading", { name: "Welcome back" }),
+    page.getByRole("heading", { name: "Welcome, Asha" }),
   ).toBeVisible();
   expect(calls).toBe(2);
+  expect(
+    await page.evaluate(() => [localStorage.length, sessionStorage.length]),
+  ).toEqual([0, 1]);
 });
 
 test("registration sends the organization and trims names without modifying the password", async ({
@@ -153,6 +159,28 @@ test("registration rejects blank names and short passwords; mobile layout fits",
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+});
+
+test("login and registration fit a short desktop viewport without page scrolling", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1366, height: 610 });
+  await page.goto("/login");
+  expect(
+    await page.evaluate(
+      () =>
+        document.documentElement.scrollWidth <= innerWidth &&
+        document.documentElement.scrollHeight <= innerHeight,
+    ),
+  ).toBe(true);
+  await page.getByRole("button", { name: "Create an account" }).click();
+  expect(
+    await page.evaluate(
+      () =>
+        document.documentElement.scrollWidth <= innerWidth &&
+        document.documentElement.scrollHeight <= innerHeight,
     ),
   ).toBe(true);
 });

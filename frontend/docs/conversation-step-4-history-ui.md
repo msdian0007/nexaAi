@@ -40,7 +40,7 @@ block submission; New conversation remains usable. Generation failures retain th
 and do not automatically retry. If a save succeeded but its response was lost, reopen
 history before submitting again: the backend does not yet provide idempotent retries.
 
-Authentication remains in memory, so refreshing the browser requires signing in again.
+Authentication survives refresh in the same tab through `sessionStorage`; the backend verifies the restored session before conversation history appears.
 Saved history remains in the database and can then be reopened. Conversation renaming,
 deletion, automatic draft preservation, and model context from earlier turns are not
 part of this step. The live list can move as conversations are updated; refresh it to
